@@ -1,0 +1,28 @@
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# PyInstaller build outputs
+build/
+dist/
+*.spec
+
+# IDE / editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local data dumps / cache
+*.sqlite
+*.db
+.DS_Store
+Thumbs.db

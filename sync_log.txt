@@ -1,0 +1,1390 @@
+
+============================================================
+INIZIO SINCRONIZZAZIONE - 2271 record distinti da processare
+Filtri applicati: {'search': '', 'tipo_attivita': 'PICKING', 'data_da': '2025-08-01', 'data_a': '2025-08-31'}
+============================================================
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 3
+Record non trovati: 0
+============================================================
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 2347
+Record non trovati: 33
+============================================================
+
+=== RIEPILOGO CODICI NON TROVATI ===
+  Codice: Q93, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q77, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q77, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q68, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QX0, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q60, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QB1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QL5, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q97, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q97, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q97, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QF5, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q32, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q97, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q60, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q32, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q32, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QZ6, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QX0, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QL5, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 0
+Record non trovati: 33
+============================================================
+
+=== RIEPILOGO CODICI NON TROVATI ===
+  Codice: QL5, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q97, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q32, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q60, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q32, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QX0, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q97, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q93, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QX0, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q68, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QB1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QZ6, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q77, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q60, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q77, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QL5, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QF5, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q32, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q97, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q97, Tipo: PICKING, Motivo: Codice non trovato in TIM
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 0
+Record non trovati: 33
+============================================================
+
+=== RIEPILOGO CODICI NON TROVATI ===
+  Codice: QL5, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QF5, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q97, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q60, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q77, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QL5, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QZ6, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q97, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q32, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QX0, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q97, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q32, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q32, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q97, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q77, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q60, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q93, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q68, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QB1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QX0, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 0
+Record non trovati: 33
+============================================================
+
+=== RIEPILOGO CODICI NON TROVATI ===
+  Codice: Q97, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q97, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q97, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q32, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QX0, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q60, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QL5, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QF5, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q97, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QB1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QX0, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q77, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q32, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QL5, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q77, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q68, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q32, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QZ6, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q60, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q93, Tipo: PICKING, Motivo: Codice non trovato in TIM
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 0
+Record non trovati: 33
+============================================================
+
+=== RIEPILOGO CODICI NON TROVATI ===
+  Codice: Q77, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QL5, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q60, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q97, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QZ6, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q97, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QL5, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q60, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QX0, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q32, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q32, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QX0, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QF5, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q77, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q97, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QB1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q32, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q93, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q97, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q68, Tipo: PICKING, Motivo: Codice non trovato in TIM
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 0
+Record non trovati: 33
+============================================================
+
+=== RIEPILOGO CODICI NON TROVATI ===
+  Codice: Q97, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q77, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QL5, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q60, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q32, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q32, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QX0, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QX0, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QL5, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q77, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q32, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q68, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QF5, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QZ6, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QB1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q93, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q60, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q97, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q97, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q97, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 593
+Record non trovati: 36
+============================================================
+
+=== RIEPILOGO CODICI NON TROVATI ===
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A77, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A61, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 593
+Record non trovati: 36
+============================================================
+
+=== RIEPILOGO CODICI NON TROVATI ===
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A61, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A77, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 593
+Record non trovati: 36
+============================================================
+
+=== RIEPILOGO CODICI NON TROVATI ===
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A77, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A61, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 0
+Record non trovati: 36
+============================================================
+
+=== RIEPILOGO CODICI NON TROVATI ===
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A61, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A77, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 0
+Record non trovati: 36
+============================================================
+
+=== RIEPILOGO CODICI NON TROVATI ===
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A77, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A61, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 0
+Record non trovati: 36
+============================================================
+
+=== RIEPILOGO CODICI NON TROVATI ===
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A61, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A77, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 593
+Record non trovati: 36
+============================================================
+
+=== RIEPILOGO CODICI NON TROVATI ===
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A77, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A61, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 593
+Record non trovati: 36
+============================================================
+
+=== RIEPILOGO CODICI NON TROVATI ===
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A61, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A77, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 638
+Record non trovati: 0
+============================================================
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 638
+Record non trovati: 0
+============================================================
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 638
+Record non trovati: 0
+Anomalie generate: 458
+============================================================
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 638
+Record non trovati: 0
+Anomalie generate: 458
+============================================================
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 638
+Record non trovati: 0
+Anomalie generate: 458
+============================================================
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 593
+Record non trovati: 36
+Anomalie generate: 168
+============================================================
+
+=== RIEPILOGO CODICI NON TROVATI ===
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A77, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A61, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 0
+Record non trovati: 36
+Anomalie generate: 168
+============================================================
+
+=== RIEPILOGO CODICI NON TROVATI ===
+  Codice: A61, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A77, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 0
+Record non trovati: 36
+Anomalie generate: 168
+============================================================
+
+=== RIEPILOGO CODICI NON TROVATI ===
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A77, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A61, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 0
+Record non trovati: 36
+Anomalie generate: 178
+============================================================
+
+=== RIEPILOGO CODICI NON TROVATI ===
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A61, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A77, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 593
+Record non trovati: 36
+Anomalie generate: 178
+============================================================
+
+=== RIEPILOGO CODICI NON TROVATI ===
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A61, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A77, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 593
+Record non trovati: 36
+Anomalie X/XX: 178
+Anomalie PRODUZIONE_SENZA_ORE: 38
+Totale anomalie generate: 216
+============================================================
+
+=== RIEPILOGO CODICI NON TROVATI ===
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A77, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A61, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 0
+Record non trovati: 36
+Anomalie X/XX: 161
+Anomalie PRODUZIONE_SENZA_ORE: 38
+Totale anomalie generate: 199
+============================================================
+
+=== RIEPILOGO CODICI NON TROVATI ===
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A77, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A61, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 0
+Record non trovati: 36
+Anomalie X/XX: 161
+Anomalie PRODUZIONE_SENZA_ORE: 15
+Totale anomalie generate: 176
+============================================================
+
+=== RIEPILOGO CODICI NON TROVATI ===
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A61, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A77, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 593
+Record non trovati: 36
+Anomalie X/XX: 161
+Anomalie PRODUZIONE_SENZA_ORE: 15
+Totale anomalie generate: 176
+============================================================
+
+=== RIEPILOGO CODICI NON TROVATI ===
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A61, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A77, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 593
+Record non trovati: 36
+Anomalie X/XX: 161
+Anomalie PRODUZIONE_SENZA_ORE: 15
+Totale anomalie generate: 176
+============================================================
+
+=== RIEPILOGO CODICI NON TROVATI ===
+  Codice: A61, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A77, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 593
+Record non trovati: 36
+Anomalie X/XX: 161
+Anomalie PRODUZIONE_SENZA_ORE: 15
+Totale anomalie generate: 176
+============================================================
+
+=== RIEPILOGO CODICI NON TROVATI ===
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A77, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A61, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 593
+Record non trovati: 36
+Anomalie X/XX: 161
+Anomalie PRODUZIONE_SENZA_ORE: 15
+Totale anomalie generate: 176
+============================================================
+
+=== RIEPILOGO CODICI NON TROVATI ===
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A61, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A77, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 593
+Record non trovati: 36
+Anomalie X/XX: 161
+Anomalie PRODUZIONE_SENZA_ORE: 15
+Totale anomalie generate: 176
+============================================================
+
+=== RIEPILOGO CODICI NON TROVATI ===
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A61, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A77, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 589
+Record non trovati: 32
+Anomalie X/XX: 160
+Anomalie PRODUZIONE_SENZA_ORE: 14
+Totale anomalie generate: 174
+============================================================
+
+=== RIEPILOGO CODICI NON TROVATI ===
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A61, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A77, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 589
+Record non trovati: 32
+Anomalie X/XX: 160
+Anomalie PRODUZIONE_SENZA_ORE: 14
+Totale anomalie generate: 174
+============================================================
+
+=== RIEPILOGO CODICI NON TROVATI ===
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A77, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A61, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A75, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: MTO, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A82, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A80, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: A79, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: PRE, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+  Codice: JSG, Tipo: CARRELLISTI, Motivo: Codice non trovato in TIM
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 2333
+Record non trovati: 33
+Anomalie X/XX: 211
+Anomalie PRODUZIONE_SENZA_ORE: 19
+Totale anomalie generate: 230
+============================================================
+
+=== RIEPILOGO CODICI NON TROVATI ===
+  Codice: Q77, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q32, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q93, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q97, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q97, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QL5, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q60, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q60, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QL5, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QB1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q97, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q68, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q77, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q97, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q70, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QZ6, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QF5, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QX0, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QX0, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q32, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: QA1, Tipo: PICKING, Motivo: Codice non trovato in TIM
+  Codice: Q32, Tipo: PICKING, Motivo: Codice non trovato in TIM
+
+============================================================
+FINE SINCRONIZZAZIONE
+Record aggiornati: 265
+Record non trovati: 6
+Anomalie X/XX: 242
+Anomalie PRODUZIONE_SENZA_ORE: 0
+Totale anomalie generate: 242
+============================================================
+
+=== RIEPILOGO CODICI NON TROVATI ===
+  Codice: DT4, Tipo: DOPPIA SPUNTA, Motivo: Codice non trovato in TIM
+  Codice: DT4, Tipo: DOPPIA SPUNTA, Motivo: Codice non trovato in TIM
+  Codice: DT4, Tipo: DOPPIA SPUNTA, Motivo: Codice non trovato in TIM
+  Codice: DT4, Tipo: DOPPIA SPUNTA, Motivo: Codice non trovato in TIM
+  Codice: DT4, Tipo: DOPPIA SPUNTA, Motivo: Codice non trovato in TIM
+  Codice: DT4, Tipo: DOPPIA SPUNTA, Motivo: Codice non trovato in TIM
