@@ -26,6 +26,10 @@ if exist dist\%APP_NAME% (
     echo [INFO] Pulizia directory dist\%APP_NAME%...
     rmdir /s /q dist\%APP_NAME%
 )
+if exist dist\%APP_NAME%.exe (
+    echo [INFO] Rimozione eseguibile precedente dist\%APP_NAME%.exe...
+    del /f dist\%APP_NAME%.exe
+)
 if exist build\%APP_NAME% (
     echo [INFO] Pulizia directory build\%APP_NAME%...
     rmdir /s /q build\%APP_NAME%
@@ -36,7 +40,7 @@ if exist %APP_NAME%.spec (
 )
 
 echo [INFO] Avvio PyInstaller (tramite python -m PyInstaller)...
-call "%PYTHON_BIN%" -m %PYINSTALLER_MODULE% --noconsole --clean --name %APP_NAME% "%MAIN_SCRIPT%" ^
+call "%PYTHON_BIN%" -m %PYINSTALLER_MODULE% --noconsole --clean --onefile --name %APP_NAME% "%MAIN_SCRIPT%" ^
     --collect-submodules mysql.connector.plugins ^
     --add-binary "%MYSQL_PLUGIN_SRC%";%MYSQL_PLUGIN_DST%
 
