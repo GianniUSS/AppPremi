@@ -1,12 +1,12 @@
 {
-    "latest_version":  "1.1.4",
+    "latest_version":  "1.1.5",
     "release_date":  "2025-11-06",
     "release_notes":  [
-                          " Icona personalizzata ora visibile sia nell\u0027exe che nella barra del titolo",
-                          " Supporto doppio metodo: iconbitmap (.ico) + iconphoto (.png)",
-                          " Risolto problema cache icona Windows"
+                          " Aggiornamento automatico ora scarica l\u0027intera applicazione (exe + risorse)",
+                          " Risolto problema icona mancante nella barra del titolo dopo aggiornamento",
+                          " Sistema aggiornamento basato su archivio ZIP completo"
                       ],
-    "download_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.1.4/GestionePremi.exe",
-    "sha256":  "8b6fee642d740a554e163ffec7796133cdec9ca745771f56d855a182f607e094",
-    "file_name":  "GestionePremi.exe"
+    "download_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.1.5/GestionePremi-v1.1.5.zip",
+    "sha256":  "59b6a64c614802cd531a4d6d79da2ac3e81f839f8c460c755f71462b35909115",
+    "file_name":  "GestionePremi-v1.1.5.zip"
 }
