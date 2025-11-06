@@ -1,12 +1,12 @@
 {
-    "latest_version":  "1.1.1",
+    "latest_version":  "1.1.3",
     "release_date":  "2025-11-06",
     "release_notes":  [
-                          " Aggiunta icona personalizzata all\u0027applicazione",
-                          " Supporto per release notes dinamiche negli aggiornamenti",
-                          " Migliorie al sistema di aggiornamento automatico"
+                          "� Icona personalizzata ora visibile nella barra del titolo",
+                          " Icona visibile sia nell\u0027eseguibile che nella finestra dell\u0027applicazione",
+                          " Migliorata gestione risorse icona in modalità frozen"
                       ],
-    "download_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.1.1/GestionePremi.exe",
-    "sha256":  "dd2cd9a971e21361b9fc09204e353ca4f46b4311540ac94f03bab66a3ed8ba73",
+    "download_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.1.3/GestionePremi.exe",
+    "sha256":  "af1df09aac860797a1c3960ee7b0856883ac12054d7a1001d5c727fd9c6d5909",
     "file_name":  "GestionePremi.exe"
 }

@@ -1,6 +1,6 @@
 """Informazioni dedicate alla versione dell'applicazione."""
 
-APP_VERSION = "1.1.1"
+APP_VERSION = "1.1.3"
 # Manifesto aggiornamenti pubblicato nel repository remoto (branch main)
 UPDATE_MANIFEST_URL = "https://raw.githubusercontent.com/GianniUSS/AppPremi/main/update_manifest.json"
 
