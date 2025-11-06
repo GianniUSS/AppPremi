@@ -4,6 +4,9 @@ Interfaccia principale dell'applicazione con menu laterale
 import tkinter as tk
 from tkinter import ttk, messagebox
 
+from updater import open_update_dialog
+from version import APP_VERSION
+
 
 class CollapsibleMenuSection(tk.Frame):
     """Sezione del menu laterale apribile e richiudibile."""
@@ -241,6 +244,13 @@ class MainMenu(tk.Tk):
                     ("perf_doppia_spunta", "Performance Doppia Spunta", self._show_performance_doppia_spunta),
                 ],
             ),
+            (
+                "Strumenti",
+                False,
+                [
+                    ("aggiorna_app", "Aggiorna Applicazione", self._show_update_dialog),
+                ],
+            ),
         ]
 
         for title, expanded, entries in sections_config:
@@ -270,7 +280,7 @@ class MainMenu(tk.Tk):
         # Info in basso
         info_label = tk.Label(
             menu_frame,
-            text="Versione 1.0",
+            text=f"Versione {APP_VERSION}",
             font=("Segoe UI", 9),
             bg=self.menu_bg,
             fg="#808080"
@@ -403,6 +413,11 @@ class MainMenu(tk.Tk):
                 "Errore",
                 f"Impossibile caricare il modulo Malus-Bonus:\n{exc}",
             )
+
+    def _show_update_dialog(self):
+        """Apre la finestra di aggiornamento applicazione."""
+        self._highlight_menu_button("aggiorna_app")
+        open_update_dialog(self)
 
     def _show_anomalie(self):
         """Mostra il modulo gestione anomalie"""
