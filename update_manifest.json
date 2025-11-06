@@ -1,12 +1,12 @@
 {
-  "latest_version": "1.0.2",
-  "release_date": "2025-11-06",
-  "release_notes": [
-    "Supporto movimenti SS nei carrellisti",
-    "Log applicativi convertiti in ASCII",
-    "Ottimizzazioni varie"
-  ],
-  "download_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.0.2/GestionePremi.exe",
-  "sha256": "27fcfc6b7455af4e7765d5fb5be53e7399ba243d1df6e0e576df977dff8f1432",
-  "file_name": "GestionePremi.exe"
+    "latest_version":  "1.0.3",
+    "release_date":  "2025-11-06",
+    "release_notes":  [
+                          "Supporto movimenti SS nei carrellisti",
+                          "Log applicativi convertiti in ASCII",
+                          "Ottimizzazioni varie"
+                      ],
+    "download_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.0.3/GestionePremi.exe",
+    "sha256":  "8cc95a151a53066ed67ca8e9f413e3317c608233253094735dde06842215dd20",
+    "file_name":  "GestionePremi.exe"
 }
