@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shutil
 import sys
 import threading
 import tkinter as tk
@@ -122,6 +123,43 @@ def _compute_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _get_app_directory() -> Optional[Path]:
+    """Restituisce la cartella dell'eseguibile se l'app è impacchettata."""
+
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return None
+
+
+def _copy_to_app_directory(source: Path, file_name: str) -> Optional[Path]:
+    """Prova a copiare il file nella cartella dell'applicazione attuale."""
+
+    app_dir = _get_app_directory()
+    if not app_dir:
+        return None
+
+    try:
+        app_dir.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        return None
+
+    target = app_dir / file_name
+    try:
+        shutil.copy2(source, target)
+        return target
+    except PermissionError:
+        stem = Path(file_name).stem or "aggiornamento"
+        suffix = Path(file_name).suffix
+        fallback = app_dir / f"{stem}_nuovo{suffix}"
+        try:
+            shutil.copy2(source, fallback)
+            return fallback
+        except OSError:
+            return None
+    except OSError:
+        return None
+
+
 class UpdateDialog(tk.Toplevel):
     """Finestra modale per la gestione degli aggiornamenti."""
 
@@ -133,6 +171,7 @@ class UpdateDialog(tk.Toplevel):
 
         self._manifest: Optional[UpdateInfo] = None
         self._download_path: Optional[Path] = None
+    self._app_copy_path: Optional[Path] = None
 
         # UI elements
         self.status_var = tk.StringVar(value="Ricerca aggiornamenti in corso...")
@@ -214,6 +253,7 @@ class UpdateDialog(tk.Toplevel):
     def _download_update(self) -> None:
         assert self._manifest is not None
         info = self._manifest
+        self._app_copy_path = None
 
         try:
             _DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -234,6 +274,8 @@ class UpdateDialog(tk.Toplevel):
                 if computed.lower() != info.sha256.lower():
                     raise ValueError("Checksum SHA256 non corrispondente")
 
+            self._app_copy_path = _copy_to_app_directory(destination, info.file_name)
+
         except Exception as exc:
             self._set_status(f"Errore durante il download: {exc}")
             self.after(0, lambda: self.install_button.config(state="normal"))
@@ -252,6 +294,13 @@ class UpdateDialog(tk.Toplevel):
             f"Aggiornamento scaricato correttamente in:\n{self._download_path}\n\n"
             "Chiudi l'applicazione corrente e avvia il nuovo eseguibile per completare l'aggiornamento."
         )
+
+        if self._app_copy_path:
+            message += (
+                "\n\n"
+                f"Una copia è stata salvata anche accanto all'applicazione in:\n{self._app_copy_path}\n"
+                "Una volta chiusa l'app puoi sostituire il vecchio eseguibile con quello nuovo."
+            )
         self._set_status(message)
         self.open_folder_button.config(state="normal")
 
