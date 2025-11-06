@@ -26,3 +26,4 @@ dist/
 *.db
 .DS_Store
 Thumbs.db
+~$*.xlsx
