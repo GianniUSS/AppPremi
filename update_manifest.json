@@ -1,12 +1,13 @@
 {
-    "latest_version":  "1.1.5",
-    "release_date":  "2025-11-06",
+    "latest_version":  "1.2.0",
+    "release_date":  "2025-11-07",
     "release_notes":  [
-                          " Aggiornamento automatico ora scarica l\u0027intera applicazione (exe + risorse)",
-                          " Risolto problema icona mancante nella barra del titolo dopo aggiornamento",
-                          " Sistema aggiornamento basato su archivio ZIP completo"
+                          " Aggiornamento veloce: scarica solo exe + icone (~200 KB invece di 12 MB)",
+                          " Script PowerShell invece di batch - nessun errore 16-bit",
+                          " Gestione automatica icone durante aggiornamento"
                       ],
-    "download_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.1.5/GestionePremi-v1.1.5.zip",
-    "sha256":  "59b6a64c614802cd531a4d6d79da2ac3e81f839f8c460c755f71462b35909115",
-    "file_name":  "GestionePremi-v1.1.5.zip"
+    "download_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.0/GestionePremi.exe",
+    "sha256":  "a56f110dd2d60916ab69467b317c3fec809bcca8dd9706ff13dab85d55aadf01",
+    "file_name":  "GestionePremi.exe",
+    "icons_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.0/icons-v1.2.0.zip"
 }
