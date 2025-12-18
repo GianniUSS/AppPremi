@@ -27,3 +27,13 @@ dist/
 .DS_Store
 Thumbs.db
 ~$*.xlsx
+
+# Export generati dall'app
+exports/
+
+# Dati locali / cartelle di lavoro non parte del codice
+DaImportare/
+FileDaverificare/
+
+# Archivio locale (file spostati fuori root durante pulizie)
+scripts/_debug_archivio/

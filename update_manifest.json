@@ -1,13 +1,14 @@
 {
-    "latest_version":  "1.2.1",
-    "release_date":  "2025-11-07",
-    "release_notes":  [
-                          " Test aggiornamento veloce da 1.2.0",
-                          " Versione di test per verificare sistema aggiornamento ottimizzato",
-                          " Piccole migliorie interfaccia"
-                      ],
-    "download_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.1/GestionePremi.exe",
-    "sha256":  "9f16442d47703f8e6650e3597040a01e7d151c0762f48639aa55d6287dfc5e2b",
-    "file_name":  "GestionePremi.exe",
-    "icons_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.1/icons-v1.2.1.zip"
+    "latest_version": "1.2.2",
+    "release_date": "2025-12-18",
+    "release_notes": [
+        "Fix Ricevitori: Giorni in Premio calcolati e mostrati con decimali (ore / ore-giorno)",
+        "Fix anomalie Carrellisti: generazione PRODUZIONE_SENZA_ORE ripristinata anche se manca la durata TIM per una specifica attivita",
+        "Fix anomalie Preparatori: la sync/rigenerazione anomalie non dipende dal filtro Tipo Attivita del Data Viewer",
+        "Pulizia progetto: archiviati script/log/test non necessari"
+    ],
+    "download_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.2/GestionePremi.exe",
+    "sha256": "52aec5ab11326b53ff64435e7a310682671fb8bcfe61febcf01e7199689ec1e5",
+    "file_name": "GestionePremi.exe",
+    "icons_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.2/icons-v1.2.2.zip"
 }

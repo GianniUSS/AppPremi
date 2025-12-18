@@ -1,7 +1,7 @@
 """
 Funzioni utility per il parsing e la normalizzazione dei dati.
 """
-from typing import List, Optional
+from typing import Any, List, Optional
 import pandas as pd
 
 
@@ -39,7 +39,7 @@ def find_column(df: pd.DataFrame, candidates: List[List[str]], required: bool = 
         for option in candidates:
             for part in option:
                 if normalize_string(part) in norm:
-                    print(f"⚠️ Trovata colonna parziale '{col}' per '{part}'")
+                    print(f"[WARN] Trovata colonna parziale '{col}' per '{part}'")
                     return col
     
     if required:
@@ -71,6 +71,12 @@ def prepare_dataframe_for_db(df: pd.DataFrame) -> List[tuple]:
     if df.empty:
         return []
         
+    def _safe_int(value: Any) -> int:
+        try:
+            return int(float(value))
+        except (TypeError, ValueError, OverflowError):
+            return 0
+
     values = []
     for idx, r in df.iterrows():
         # Gestisci ore_tim e ore_gestionale se presenti
@@ -87,24 +93,35 @@ def prepare_dataframe_for_db(df: pd.DataFrame) -> List[tuple]:
         try:
             totale_colli = int(r["totale_colli"]) if pd.notna(r["totale_colli"]) else 0
         except (ValueError, OverflowError) as e:
-            print(f"❌ ERRORE conversione totale_colli alla riga {idx}:")
+            print(f"[ERROR] ERRORE conversione totale_colli alla riga {idx}:")
             print(f"   Valore: {r['totale_colli']} (tipo: {type(r['totale_colli'])})")
             print(f"   Record completo: {r.to_dict()}")
             print(f"   Errore: {e}")
             totale_colli = 0
+
+        penalita_eccesso = _safe_int(r["penalita_eccesso"]) if "penalita_eccesso" in r else 0
+        penalita_difetto = _safe_int(r["penalita_difetto"]) if "penalita_difetto" in r else 0
         
-        try:
-            penalita = int(r.get("penalita", 0))
-        except (ValueError, OverflowError) as e:
-            print(f"❌ ERRORE conversione penalita alla riga {idx}: {e}")
-            penalita = 0
-        
+        # Gestisci penalita_totale (DECIMAL) se presente
+        penalita_totale = 0.0
+        if "penalita_totale" in r and pd.notna(r["penalita_totale"]):
+            penalita_totale = float(r["penalita_totale"])
+
+        if (penalita_eccesso == 0 and penalita_difetto == 0) and "penalita" in r:
+            legacy_pen = _safe_int(r.get("penalita"))
+            if legacy_pen >= 0:
+                penalita_eccesso = legacy_pen
+            else:
+                penalita_difetto = abs(legacy_pen)
+
         tupla = (
             r["data"],
             str(r["codice_preparatore"]),
             str(r["nome_preparatore"]) if pd.notna(r["nome_preparatore"]) else None,
             totale_colli,
-            penalita,
+            penalita_eccesso,
+            penalita_difetto,
+            penalita_totale,
             r["tipo_attivita"],
             str(r.get("tipo", "")) if pd.notna(r.get("tipo", "")) else "",
             ore_tim,
@@ -113,9 +130,9 @@ def prepare_dataframe_for_db(df: pd.DataFrame) -> List[tuple]:
         
         # Log della tupla
         if idx < 5:  # Log solo le prime 5
-            print(f"  Tupla {idx}: data={tupla[0]}, codice={tupla[1]}, colli={tupla[3]} ({type(tupla[3])}), ore_gest={tupla[8]}")
+            print(f"  Tupla {idx}: data={tupla[0]}, codice={tupla[1]}, colli={tupla[3]} ({type(tupla[3])}), ore_gest={tupla[9]}")
         
         values.append(tupla)
     
-    print(f"\n✅ Totale tuple preparate: {len(values)}")
+    print(f"\n[OK] Totale tuple preparate: {len(values)}")
     return values

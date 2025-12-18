@@ -9,6 +9,22 @@ from mysql.connector import errorcode
 from config import MYSQL_CONFIG, TABLE_NAME
 
 
+def _column_exists(cur: Any, table_name: str, column_name: str) -> bool:
+        """Return True if the given column exists in the specified table."""
+        cur.execute(
+                """
+                SELECT COUNT(*)
+                FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE()
+                    AND TABLE_NAME = %s
+                    AND COLUMN_NAME = %s
+                """,
+                (table_name, column_name),
+        )
+        result = cur.fetchone()
+        return bool(result and result[0])
+
+
 def ensure_table_and_indexes() -> None:
     """Crea la tabella e l'indice unico se non esistono."""
     with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
@@ -21,15 +37,42 @@ def ensure_table_and_indexes() -> None:
                     codice_preparatore VARCHAR(50) NOT NULL,
                     nome_preparatore VARCHAR(255),
                     totale_colli INT,
-                    penalita INT DEFAULT 0,
+                    penalita_eccesso INT DEFAULT 0,
+                    penalita_difetto INT DEFAULT 0,
+                    penalita_totale DECIMAL(10,2) DEFAULT 0 COMMENT 'Penalità totale (abs(diff/uvc) sommato)',
                     tipo_attivita VARCHAR(50) NOT NULL,
                     tipo VARCHAR(20),
-                    ore_tim DECIMAL(10,2) DEFAULT 0 COMMENT 'Ore di lavoro da TIM',
-                    ore_gestionale DECIMAL(10,2) DEFAULT 0 COMMENT 'Ore calcolate con sessioni (solo carrellisti)',
+                    ore_tim DECIMAL(10,2) DEFAULT 0 COMMENT 'MINUTI di lavoro da TIM',
+                    ore_gestionale DECIMAL(10,2) DEFAULT 0 COMMENT 'MINUTI calcolati con sessioni (solo carrellisti)',
                     UNIQUE KEY uniq_record (data, codice_preparatore, tipo_attivita, tipo)
                 )
                 """
             )
+            
+            # Migrazione colonne penalità separate
+            for column_name, definition in (
+                ("penalita_eccesso", f"ALTER TABLE {TABLE_NAME} ADD COLUMN penalita_eccesso INT DEFAULT 0 AFTER totale_colli"),
+                ("penalita_difetto", f"ALTER TABLE {TABLE_NAME} ADD COLUMN penalita_difetto INT DEFAULT 0 AFTER penalita_eccesso"),
+            ):
+                try:
+                    if not _column_exists(cur, TABLE_NAME, column_name):
+                        cur.execute(definition)
+                except mysql.connector.Error:
+                    pass
+
+            if _column_exists(cur, TABLE_NAME, "penalita"):
+                try:
+                    cur.execute(
+                        f"""
+                        UPDATE {TABLE_NAME}
+                        SET penalita_eccesso = GREATEST(penalita, 0),
+                            penalita_difetto = GREATEST(-penalita, 0)
+                        WHERE penalita IS NOT NULL
+                        """
+                    )
+                    cur.execute(f"ALTER TABLE {TABLE_NAME} DROP COLUMN penalita")
+                except mysql.connector.Error:
+                    pass
             
             # Migrazione: rinomina tempo -> ore_tim e converti da minuti a ore
             try:
@@ -47,7 +90,7 @@ def ensure_table_and_indexes() -> None:
                     cur.execute(
                         f"""
                         ALTER TABLE {TABLE_NAME}
-                        ADD COLUMN ore_tim DECIMAL(10,2) DEFAULT 0 COMMENT 'Ore di lavoro da TIM'
+                        ADD COLUMN ore_tim DECIMAL(10,2) DEFAULT 0 COMMENT 'MINUTI di lavoro da TIM'
                         """
                     )
                     # Converti tempo (minuti) in ore_tim (ore)
@@ -73,7 +116,7 @@ def ensure_table_and_indexes() -> None:
                 cur.execute(
                     f"""
                     ALTER TABLE {TABLE_NAME}
-                    ADD COLUMN ore_gestionale DECIMAL(10,2) DEFAULT 0 COMMENT 'Ore calcolate con sessioni (solo carrellisti)'
+                    ADD COLUMN ore_gestionale DECIMAL(10,2) DEFAULT 0 COMMENT 'MINUTI calcolati con sessioni (solo carrellisti)'
                     """
                 )
             except mysql.connector.Error:
@@ -286,7 +329,7 @@ def ensure_table_and_indexes() -> None:
                     codice_preparatore VARCHAR(50) NOT NULL,
                     nome_preparatore VARCHAR(255),
                     tipo_attivita VARCHAR(50),
-                    ore_tim DECIMAL(10,2) COMMENT 'Ore presenti in TIM (per anomalie tipo 2)',
+                    ore_tim DECIMAL(10,2) COMMENT 'MINUTI presenti in TIM (per anomalie tipo 2)',
                     dettagli TEXT COMMENT 'Descrizione dettagliata anomalia',
                     stato VARCHAR(20) DEFAULT 'APERTA' COMMENT 'APERTA, VERIFICATA, RISOLTA',
                     note VARCHAR(255),
@@ -384,7 +427,101 @@ def ensure_table_and_indexes() -> None:
                 )
                 """
             )
+
+            # Tabella premi ricevitori
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS premi_ricevitori (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    anno INT NOT NULL,
+                    mese INT NOT NULL,
+                    codice_preparatore VARCHAR(50) NOT NULL,
+                    nome_preparatore VARCHAR(255),
+                    giorni_lavorati INT NOT NULL DEFAULT 0,
+                    giorni_in_premio DECIMAL(10,2) NOT NULL DEFAULT 0,
+                    totale_pallet DECIMAL(12,0) NOT NULL DEFAULT 0,
+                    ore_lavorate DECIMAL(10,2) NOT NULL DEFAULT 0,
+                    plt_ora_medio DECIMAL(10,2) NOT NULL DEFAULT 0,
+                    fascia_raggiunta VARCHAR(50),
+                    premio_base DECIMAL(10,2) NOT NULL DEFAULT 0,
+                    premio_kpi DECIMAL(10,2) NOT NULL DEFAULT 0,
+                    premio_totale DECIMAL(10,2) NOT NULL DEFAULT 0,
+                    bonus_applicato BOOLEAN DEFAULT FALSE,
+                    data_calcolo TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    note VARCHAR(255),
+                    UNIQUE KEY uniq_premio_ricevitori (anno, mese, codice_preparatore),
+                    INDEX idx_ricevitori_anno_mese (anno, mese),
+                    INDEX idx_ricevitori_codice (codice_preparatore)
+                )
+                """
+            )
+
+            # Migrazione: giorni_in_premio da INT a DECIMAL(10,2)
+            try:
+                cur.execute(
+                    """
+                    ALTER TABLE premi_ricevitori
+                    MODIFY COLUMN giorni_in_premio DECIMAL(10,2) NOT NULL DEFAULT 0
+                    """
+                )
+            except mysql.connector.Error:
+                pass
             
+            # Tabella premi doppia spunta
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS premi_doppia_spunta (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    anno INT NOT NULL,
+                    mese INT NOT NULL,
+                    codice_preparatore VARCHAR(50) NOT NULL,
+                    nome_preparatore VARCHAR(255),
+                    totale_colli DECIMAL(12,0) NOT NULL DEFAULT 0,
+                    colli_nuove_aperture DECIMAL(12,0) NOT NULL DEFAULT 0,
+                    ore_lavorate DECIMAL(10,2) NOT NULL DEFAULT 0,
+                    colli_ora DECIMAL(10,2) NOT NULL DEFAULT 0,
+                    penalita_eccesso DECIMAL(10,2) NOT NULL DEFAULT 0,
+                    penalita_difetto DECIMAL(10,2) NOT NULL DEFAULT 0,
+                    errori_difetto INT NOT NULL DEFAULT 0,
+                    penalita_totale DECIMAL(10,2) NOT NULL DEFAULT 0,
+                    fascia_raggiunta VARCHAR(50),
+                    premio_base DECIMAL(10,2) NOT NULL DEFAULT 0,
+                    premio_kpi DECIMAL(10,2) NOT NULL DEFAULT 0,
+                    premio_totale DECIMAL(10,2) NOT NULL DEFAULT 0,
+                    bonus_applicato BOOLEAN DEFAULT FALSE,
+                    data_calcolo TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    note VARCHAR(255),
+                    UNIQUE KEY uniq_premio_doppia (anno, mese, codice_preparatore),
+                    INDEX idx_doppia_anno_mese (anno, mese),
+                    INDEX idx_doppia_codice (codice_preparatore)
+                )
+                """
+            )
+
+            # Garantisce l'esistenza delle colonne anche su installazioni precedenti
+            doppia_columns_alter = [
+                "ADD COLUMN colli_nuove_aperture DECIMAL(12,0) NOT NULL DEFAULT 0 AFTER totale_colli",
+                "ADD COLUMN ore_lavorate DECIMAL(10,2) NOT NULL DEFAULT 0 AFTER colli_nuove_aperture",
+                "ADD COLUMN colli_ora DECIMAL(10,2) NOT NULL DEFAULT 0 AFTER ore_lavorate",
+                "ADD COLUMN penalita_eccesso DECIMAL(10,2) NOT NULL DEFAULT 0 AFTER colli_ora",
+                "ADD COLUMN penalita_difetto DECIMAL(10,2) NOT NULL DEFAULT 0 AFTER penalita_eccesso",
+                "ADD COLUMN errori_difetto INT NOT NULL DEFAULT 0 AFTER penalita_difetto",
+                "ADD COLUMN penalita_totale DECIMAL(10,2) NOT NULL DEFAULT 0 AFTER errori_difetto",
+                "ADD COLUMN fascia_raggiunta VARCHAR(50) NULL AFTER penalita_totale",
+                "ADD COLUMN premio_base DECIMAL(10,2) NOT NULL DEFAULT 0 AFTER fascia_raggiunta",
+                "ADD COLUMN premio_kpi DECIMAL(10,2) NOT NULL DEFAULT 0 AFTER premio_base",
+                "ADD COLUMN premio_totale DECIMAL(10,2) NOT NULL DEFAULT 0 AFTER premio_kpi",
+                "ADD COLUMN bonus_applicato BOOLEAN DEFAULT FALSE AFTER premio_totale",
+                "ADD COLUMN note VARCHAR(255) NULL AFTER bonus_applicato",
+                "ADD COLUMN data_calcolo TIMESTAMP DEFAULT CURRENT_TIMESTAMP AFTER note",
+            ]
+
+            for alter in doppia_columns_alter:
+                try:
+                    cur.execute(f"ALTER TABLE premi_doppia_spunta {alter}")
+                except mysql.connector.Error:
+                    pass
+
             # Tabella dettaglio sessioni carrellisti con colonne separate per tipo
             cur.execute(
                 """
@@ -428,11 +565,47 @@ def ensure_table_and_indexes() -> None:
                 """
             )
             
+            # Tabella dettaglio sessioni doppia spunta
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS sessioni_doppia_spunta (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    data DATE NOT NULL,
+                    codice_preparatore VARCHAR(50) NOT NULL COMMENT 'Codice preparatore (prepa)',
+                    altro_codice VARCHAR(50) NULL COMMENT 'Altro codice dalla colonna Prep',
+                    numero_riga INT NOT NULL COMMENT 'Progressivo riga nella giornata',
+                    excel_row INT NULL COMMENT 'Indice riga originale del file (pandas index)',
+                    ora_inizio TIME NULL COMMENT 'Ora inizio attività',
+                    ora_fine TIME NULL COMMENT 'Ora fine attività',
+                    tempo_minuti DECIMAL(10,2) NULL COMMENT 'Durata in minuti',
+                    n_colli INT NOT NULL COMMENT 'Numero colli calcolato (qtasped/uvc arrotondato per eccesso)',
+                    uvc INT NULL COMMENT 'Valore UVC dalla colonna N',
+                    qtasped INT NULL COMMENT 'Valore qtasped dalla colonna M',
+                    codpro VARCHAR(50) NULL COMMENT 'Codice prodotto',
+                    lotto VARCHAR(50) NULL COMMENT 'Lotto',
+                    tipo VARCHAR(100) NULL COMMENT 'Tipo cliente o RS',
+                    diff DECIMAL(10,2) NULL COMMENT 'Valore differenza originale',
+                    penalita_eccesso INT NOT NULL DEFAULT 0 COMMENT 'Penalità per errori in eccesso',
+                    penalita_difetto INT NOT NULL DEFAULT 0 COMMENT 'Penalità per errori in difetto',
+                    penalita DECIMAL(10,2) NULL COMMENT 'Penalità assoluta (abs(diff/uvc))',
+                    
+                    -- Totali giornalieri (solo prima riga)
+                    totale_colli_giornata INT NULL COMMENT 'Totale colli nella giornata (solo prima riga)',
+                    ore_gestionale_giornaliere DECIMAL(10,2) NULL COMMENT 'Ore totali nella giornata (solo prima riga)',
+                    
+                    data_importazione TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_data_codice (data, codice_preparatore),
+                    INDEX idx_data (data)
+                )
+                """
+            )
+            
             conn.commit()
 
             # Allinea schema esistente con la colonna attività bonus
             _ensure_malus_bonus_schema(cur)
             _ensure_sessioni_carrellisti_schema(cur)
+            _ensure_sessioni_doppia_spunta_schema(cur)
 
 
 def _ensure_sessioni_carrellisti_schema(cur: Any) -> None:
@@ -490,6 +663,133 @@ def _ensure_sessioni_carrellisti_schema(cur: Any) -> None:
             print(
                 f"[WARN] Errore durante l'aggiornamento schema sessioni_carrellisti (colonna {column_name}): {exc}"
             )
+
+
+def _ensure_sessioni_doppia_spunta_schema(cur: Any) -> None:
+    """Garantisce la presenza delle colonne uvc, qtasped, codpro, lotto, excel_row, altro_codice, diff e penalita nella tabella sessioni_doppia_spunta."""
+    connection = getattr(cur, "connection", None)
+    if connection is None:
+        return
+
+    alterations = [
+        (
+            "uvc",
+            """
+                ALTER TABLE sessioni_doppia_spunta
+                ADD COLUMN uvc INT NULL COMMENT 'Valore UVC dalla colonna N'
+                AFTER n_colli
+            """
+        ),
+        (
+            "excel_row",
+            """
+                ALTER TABLE sessioni_doppia_spunta
+                ADD COLUMN excel_row INT NULL COMMENT 'Indice riga originale del file (pandas index)'
+                AFTER numero_riga
+            """
+        ),
+        (
+            "altro_codice",
+            """
+                ALTER TABLE sessioni_doppia_spunta
+                ADD COLUMN altro_codice VARCHAR(50) NULL COMMENT 'Altro codice dalla colonna Prep'
+                AFTER codice_preparatore
+            """
+        ),
+        (
+            "qtasped",
+            """
+                ALTER TABLE sessioni_doppia_spunta
+                ADD COLUMN qtasped INT NULL COMMENT 'Valore qtasped dalla colonna M'
+                AFTER uvc
+            """
+        ),
+        (
+            "codpro",
+            """
+                ALTER TABLE sessioni_doppia_spunta
+                ADD COLUMN codpro VARCHAR(50) NULL COMMENT 'Codice prodotto'
+                AFTER qtasped
+            """
+        ),
+        (
+            "lotto",
+            """
+                ALTER TABLE sessioni_doppia_spunta
+                ADD COLUMN lotto VARCHAR(50) NULL COMMENT 'Lotto'
+                AFTER codpro
+            """
+        ),
+        (
+            "penalita_eccesso",
+            f"""
+                ALTER TABLE sessioni_doppia_spunta
+                ADD COLUMN penalita_eccesso INT NOT NULL DEFAULT 0 COMMENT 'Penalità per errori in eccesso'
+            """
+        ),
+        (
+            "penalita_difetto",
+            f"""
+                ALTER TABLE sessioni_doppia_spunta
+                ADD COLUMN penalita_difetto INT NOT NULL DEFAULT 0 COMMENT 'Penalità per errori in difetto'
+            """
+        ),
+        (
+            "penalita",
+            f"""
+                ALTER TABLE sessioni_doppia_spunta
+                ADD COLUMN penalita DECIMAL(10,2) NULL COMMENT 'Penalità assoluta (abs(diff/uvc))'
+                AFTER penalita_difetto
+            """
+        ),
+        (
+            "diff",
+            f"""
+                ALTER TABLE sessioni_doppia_spunta
+                ADD COLUMN diff DECIMAL(10,2) NULL COMMENT 'Valore differenza originale'
+                AFTER tipo
+            """
+        ),
+    ]
+
+    for column_name, alter_sql in alterations:
+        try:
+            cur.execute(
+                """
+                    SELECT COUNT(*)
+                    FROM information_schema.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE()
+                      AND TABLE_NAME = 'sessioni_doppia_spunta'
+                      AND COLUMN_NAME = %s
+                """,
+                (column_name,),
+            )
+            result = cur.fetchone()
+
+            if result and result[0] == 0:
+                cur.execute(alter_sql)
+                connection.commit()
+                print(f"[OK] Colonna '{column_name}' aggiunta a sessioni_doppia_spunta")
+        except Exception as exc:
+            print(
+                f"[WARN] Errore durante l'aggiornamento schema sessioni_doppia_spunta (colonna {column_name}): {exc}"
+            )
+
+    if _column_exists(cur, "sessioni_doppia_spunta", "penalita"):
+        try:
+            cur.execute(
+                """
+                UPDATE sessioni_doppia_spunta
+                SET penalita_eccesso = GREATEST(penalita, 0),
+                    penalita_difetto = GREATEST(-penalita, 0)
+                WHERE penalita IS NOT NULL
+                """
+            )
+            connection.commit()
+            cur.execute("ALTER TABLE sessioni_doppia_spunta DROP COLUMN penalita")
+            connection.commit()
+        except Exception as exc:
+            print(f"[WARN] Impossibile migrare/droppare colonna penalita in sessioni_doppia_spunta: {exc}")
 
 
 def _ensure_malus_bonus_schema(cur: Any) -> None:
@@ -564,12 +864,14 @@ def insert_batch_data(values: List[Tuple]) -> int:
         
     sql = f"""
         INSERT INTO {TABLE_NAME}
-        (data, codice_preparatore, nome_preparatore, totale_colli, penalita, tipo_attivita, tipo, ore_tim, ore_gestionale)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        (data, codice_preparatore, nome_preparatore, totale_colli, penalita_eccesso, penalita_difetto, penalita_totale, tipo_attivita, tipo, ore_tim, ore_gestionale)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         ON DUPLICATE KEY UPDATE
             nome_preparatore = VALUES(nome_preparatore),
             totale_colli     = VALUES(totale_colli),
-            penalita         = VALUES(penalita),
+            penalita_eccesso = VALUES(penalita_eccesso),
+            penalita_difetto = VALUES(penalita_difetto),
+            penalita_totale  = VALUES(penalita_totale),
             tipo_attivita    = VALUES(tipo_attivita),
             tipo             = VALUES(tipo),
             ore_tim          = VALUES(ore_tim),
@@ -590,7 +892,13 @@ def insert_batch_data(values: List[Tuple]) -> int:
                 # Prova a inserire riga per riga per trovare il problema
                 for i, val in enumerate(values):
                     try:
-                        cur.execute(sql.replace("VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)", "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)"), val)
+                        cur.execute(
+                            sql.replace(
+                                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                            ),
+                            val,
+                        )
                         conn.commit()
                     except Exception as row_error:
                         print(f"\n[FAIL] Errore alla riga {i}:")
@@ -602,27 +910,85 @@ def insert_batch_data(values: List[Tuple]) -> int:
                 return len(values)
 
 
-def update_penalita_picking(values: List[Tuple[datetime.date, str, int]]) -> int:
-    """Aggiorna la penalità delle attività PICKING per data e codice preparatore."""
+def update_penalita_picking(values: List[Tuple[datetime.date, str, float]]) -> int:
+    """Aggiorna la penalità totale delle attività PICKING per data e codice preparatore.
+
+    Nota: i campi legacy penalita_eccesso/penalita_difetto vengono azzerati.
+    """
 
     if not values:
         return 0
 
     sql = f"""
         UPDATE {TABLE_NAME}
-        SET penalita = %s
+        SET penalita_totale = %s,
+            penalita_eccesso = 0,
+            penalita_difetto = 0
         WHERE data = %s
           AND codice_preparatore = %s
           AND tipo_attivita = %s
     """
 
-    params = [(pen, data, codice, "PICKING") for data, codice, pen in values]
+    # Prima azzera le penalità PICKING per le date coinvolte,
+    # così non restano valori "vecchi" su codici non presenti in questa importazione.
+    unique_dates = sorted({d for (d, _, _) in values})
+    reset_sql = (
+        f"UPDATE {TABLE_NAME} "
+        "SET penalita_totale = 0, penalita_eccesso = 0, penalita_difetto = 0 "
+        "WHERE tipo_attivita = %s AND data IN (" + ",".join(["%s"] * len(unique_dates)) + ")"
+    )
 
     with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
         with closing(conn.cursor()) as cur:
-            cur.executemany(sql, params)
+            cur.execute(reset_sql, tuple(["PICKING", *unique_dates]))
+            updated_total = 0
+            for data, codice, penalita_totale in values:
+                pen = float(penalita_totale or 0)
+
+                cur.execute(sql, (pen, data, codice, "PICKING"))
+                if cur.rowcount > 0:
+                    updated_total += cur.rowcount
+
             conn.commit()
-            return cur.rowcount
+    return updated_total
+
+
+def get_penalita_picking_from_sessioni(dates: List[datetime.date]) -> List[Tuple[datetime.date, str, float]]:
+    """Ritorna le penalità totali da applicare ai record PICKING.
+
+    Regola: il codice PICKING è sempre il primo codice a sinistra del trattino in `altro_codice`.
+    """
+
+    if not dates:
+        return []
+
+    placeholders = ",".join(["%s"] * len(dates))
+    sql = f"""
+        SELECT
+            data,
+            UPPER(TRIM(SUBSTRING_INDEX(altro_codice, '-', 1))) AS codice_picking,
+            ROUND(SUM(COALESCE(penalita, 0)), 2) AS penalita_totale
+        FROM sessioni_doppia_spunta
+        WHERE data IN ({placeholders})
+                    AND penalita <> 0
+                    AND qtasped IS NOT NULL
+          AND altro_codice IS NOT NULL
+          AND TRIM(altro_codice) <> ''
+        GROUP BY data, codice_picking
+    """
+
+    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+        with closing(conn.cursor(dictionary=True)) as cur:
+            cur.execute(sql, dates)
+            rows = cast(List[Dict[str, Any]], cur.fetchall())
+
+    out: List[Tuple[datetime.date, str, float]] = []
+    for r in rows:
+        codice = (r.get("codice_picking") or "").strip().upper()
+        if not codice:
+            continue
+        out.append((r["data"], codice, float(r.get("penalita_totale") or 0)))
+    return out
 
 
 def save_nuove_aperture(data_da: str, data_a: str, negozi: List[str]) -> int:
@@ -687,6 +1053,20 @@ def load_nuove_aperture(data_da: str, data_a: str) -> List[str]:
             )
             rows = cur.fetchall()
             return [str(row[0]) for row in rows]  # type: ignore[index]
+
+
+def fetch_all_nuove_aperture() -> List[Dict[str, Any]]:
+    """Restituisce tutti i periodi registrati di nuove aperture."""
+    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+        with closing(conn.cursor(dictionary=True)) as cur:
+            cur.execute(
+                """
+                SELECT data_da, data_a, negozio
+                FROM nuove_aperture
+                ORDER BY negozio, data_da
+                """
+            )
+            return cast(List[Dict[str, Any]], cur.fetchall())
 
 
 def fetch_fasce_premi(tipo: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -1224,6 +1604,100 @@ def delete_premi_carrellisti(anno: int, mese: int) -> None:
             conn.commit()
 
 
+def save_premi_ricevitori(anno: int, mese: int, premi: List[Dict[str, Any]]) -> None:
+    """Salva i premi ricevimento per il mese selezionato sovrascrivendo quelli esistenti."""
+    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+        with closing(conn.cursor()) as cur:
+            cur.execute(
+                "DELETE FROM premi_ricevitori WHERE anno = %s AND mese = %s",
+                (anno, mese),
+            )
+
+            insert_sql = """
+                INSERT INTO premi_ricevitori (
+                    anno, mese, codice_preparatore, nome_preparatore,
+                    giorni_lavorati, giorni_in_premio, totale_pallet, ore_lavorate,
+                    plt_ora_medio, fascia_raggiunta, premio_base, premio_kpi,
+                    premio_totale, bonus_applicato, note
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """
+
+            for premio in premi:
+                cur.execute(
+                    insert_sql,
+                    (
+                        anno,
+                        mese,
+                        premio.get("codice"),
+                        premio.get("nome"),
+                        premio.get("giorni_lavorati"),
+                        premio.get("giorni_in_premio"),
+                        premio.get("tot_pallet"),
+                        premio.get("ore"),
+                        premio.get("plt_ora"),
+                        premio.get("fascia"),
+                        premio.get("premio_base"),
+                        premio.get("premio_kpi"),
+                        premio.get("premio_totale"),
+                        premio.get("bonus_applicato", False),
+                        premio.get("note"),
+                    ),
+                )
+
+            conn.commit()
+
+
+def fetch_premi_ricevitori(
+    anno: Optional[int] = None,
+    mese: Optional[int] = None,
+    codice_preparatore: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """Recupera i premi ricevimento filtrati per anno/mese/codice."""
+    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+        with closing(conn.cursor(dictionary=True)) as cur:
+            conditions: List[str] = []
+            params: List[Any] = []
+
+            if anno:
+                conditions.append("anno = %s")
+                params.append(anno)
+            if mese:
+                conditions.append("mese = %s")
+                params.append(mese)
+            if codice_preparatore:
+                conditions.append("codice_preparatore = %s")
+                params.append(codice_preparatore)
+
+            where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
+
+            query = f"""
+                SELECT
+                    id, anno, mese, codice_preparatore, nome_preparatore,
+                    giorni_lavorati, giorni_in_premio, totale_pallet, ore_lavorate,
+                    plt_ora_medio, fascia_raggiunta, premio_base, premio_kpi,
+                    premio_totale, bonus_applicato, data_calcolo, note
+                FROM premi_ricevitori
+                {where_clause}
+                ORDER BY premio_totale DESC
+            """
+
+            cur.execute(query, params)
+            result = cur.fetchall()
+            return cast(List[Dict[str, Any]], result)
+
+
+def delete_premi_ricevitori(anno: int, mese: int) -> None:
+    """Elimina i premi ricevimento per un mese specifico."""
+    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+        with closing(conn.cursor()) as cur:
+            cur.execute(
+                "DELETE FROM premi_ricevitori WHERE anno = %s AND mese = %s",
+                (anno, mese),
+            )
+            conn.commit()
+
+
 def save_premi_preparatori(anno: int, mese: int, premi: List[Dict[str, Any]]) -> None:
     """Salva i premi preparatori per un mese specifico sovrascrivendo quelli esistenti."""
     with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
@@ -1308,6 +1782,101 @@ def delete_premi_preparatori(anno: int, mese: int) -> None:
         with closing(conn.cursor()) as cur:
             cur.execute(
                 "DELETE FROM premi_preparatori WHERE anno = %s AND mese = %s",
+                (anno, mese),
+            )
+            conn.commit()
+
+
+def save_premi_doppia_spunta(anno: int, mese: int, premi: List[Dict[str, Any]]) -> None:
+    """Salva i premi Doppia Spunta per un dato mese sovrascrivendo gli esistenti."""
+    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+        with closing(conn.cursor()) as cur:
+            cur.execute(
+                "DELETE FROM premi_doppia_spunta WHERE anno = %s AND mese = %s",
+                (anno, mese),
+            )
+
+            for premio in premi:
+                cur.execute(
+                    """
+                    INSERT INTO premi_doppia_spunta (
+                        anno, mese, codice_preparatore, nome_preparatore,
+                        totale_colli, colli_nuove_aperture, ore_lavorate, colli_ora,
+                        penalita_eccesso, penalita_difetto, errori_difetto, penalita_totale,
+                        fascia_raggiunta, premio_base, premio_kpi, premio_totale,
+                        bonus_applicato, note
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    (
+                        anno,
+                        mese,
+                        premio.get("codice"),
+                        premio.get("nome"),
+                        premio.get("tot_colli"),
+                        premio.get("colli_nuove_aperture", 0),
+                        premio.get("ore"),
+                        premio.get("colli_ora"),
+                        premio.get("penalita_eccesso", premio.get("penalita", 0)),
+                        premio.get("penalita_difetto", 0),
+                        premio.get("errori_difetto", 0),
+                        premio.get("penalita"),
+                        premio.get("fascia"),
+                        premio.get("premio_base"),
+                        premio.get("premio_kpi"),
+                        premio.get("premio_totale"),
+                        premio.get("bonus_applicato", False),
+                        premio.get("note"),
+                    ),
+                )
+            conn.commit()
+
+
+def fetch_premi_doppia_spunta(
+    anno: Optional[int] = None,
+    mese: Optional[int] = None,
+    codice_preparatore: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """Recupera i premi Doppia Spunta filtrati per anno/mese/codice."""
+    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+        with closing(conn.cursor(dictionary=True)) as cur:
+            conditions: List[str] = []
+            params: List[Any] = []
+
+            if anno:
+                conditions.append("anno = %s")
+                params.append(anno)
+            if mese:
+                conditions.append("mese = %s")
+                params.append(mese)
+            if codice_preparatore:
+                conditions.append("codice_preparatore = %s")
+                params.append(codice_preparatore)
+
+            where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
+
+            query = f"""
+                SELECT
+                    id, anno, mese, codice_preparatore, nome_preparatore,
+                    totale_colli, colli_nuove_aperture, ore_lavorate, colli_ora,
+                    penalita_eccesso, penalita_difetto, errori_difetto, penalita_totale,
+                    fascia_raggiunta, premio_base, premio_kpi, premio_totale,
+                    bonus_applicato, data_calcolo, note
+                FROM premi_doppia_spunta
+                {where_clause}
+                ORDER BY premio_totale DESC
+            """
+            cur.execute(query, params)
+            result = cur.fetchall()
+            return cast(List[Dict[str, Any]], result)
+
+
+def delete_premi_doppia_spunta(anno: int, mese: int) -> None:
+    """Elimina i premi Doppia Spunta per un determinato mese."""
+    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+        with closing(conn.cursor()) as cur:
+            cur.execute(
+                "DELETE FROM premi_doppia_spunta WHERE anno = %s AND mese = %s",
                 (anno, mese),
             )
             conn.commit()
@@ -1512,6 +2081,212 @@ def delete_sessioni_carrellisti(data: datetime.date, codice_preparatore: Optiona
             else:
                 cur.execute(
                     "DELETE FROM sessioni_carrellisti WHERE data = %s",
+                    (data,)
+                )
+            conn.commit()
+
+
+def save_sessioni_doppia_spunta(sessioni: List[Dict[str, Any]]) -> None:
+    """Salva i dettagli delle sessioni doppia spunta nel database."""
+    if not sessioni:
+        print("[WARN] save_sessioni_doppia_spunta: nessuna sessione da salvare")
+        return
+    
+    print(f"[INFO] save_sessioni_doppia_spunta: ricevute {len(sessioni)} righe")
+    try:
+        unique_codes = {s.get('codice_preparatore') for s in sessioni}
+        sample = sessioni[:2]
+        print(f"[DEBUG] sessioni_doppia_spunta codici={len(unique_codes)} sample={sample}")
+    except Exception:
+        pass
+    
+    try:
+        with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+            conn.autocommit = False
+            
+            with closing(conn.cursor()) as cur:
+                # Garantisce che la tabella abbia sempre le nuove colonne prima di scrivere
+                try:
+                    _ensure_sessioni_doppia_spunta_schema(cur)
+                except Exception as schema_exc:
+                    print(f"[WARN] Impossibile aggiornare schema sessioni_doppia_spunta prima dell'inserimento: {schema_exc}")
+
+                # Salvaguardia: aggiunge 'altro_codice' se ancora assente
+                try:
+                    cur.execute(
+                        """
+                            SELECT COUNT(*)
+                            FROM information_schema.COLUMNS
+                            WHERE TABLE_SCHEMA = DATABASE()
+                              AND TABLE_NAME = 'sessioni_doppia_spunta'
+                              AND COLUMN_NAME = 'altro_codice'
+                        """
+                    )
+                    res = cur.fetchone()
+                    if res and res[0] == 0:
+                        print("[INFO] Colonna 'altro_codice' assente: la aggiungo ora")
+                        cur.execute(
+                            """
+                                ALTER TABLE sessioni_doppia_spunta
+                                ADD COLUMN altro_codice VARCHAR(50) NULL COMMENT 'Altro codice dalla colonna Prep'
+                                AFTER codice_preparatore
+                            """
+                        )
+                        conn.commit()
+                        print("[OK] Colonna 'altro_codice' aggiunta (salvaguardia)")
+                except Exception as exc:
+                    print(f"[WARN] Salvaguardia altro_codice fallita: {exc}")
+
+                # Salvaguardia: aggiunge penalita_eccesso/difetto/penalita/diff se mancanti
+                extra_cols = {
+                    "penalita_eccesso": "ALTER TABLE sessioni_doppia_spunta ADD COLUMN penalita_eccesso INT NOT NULL DEFAULT 0 COMMENT 'Penalità per errori in eccesso'",
+                    "penalita_difetto": "ALTER TABLE sessioni_doppia_spunta ADD COLUMN penalita_difetto INT NOT NULL DEFAULT 0 COMMENT 'Penalità per errori in difetto'",
+                    "penalita": "ALTER TABLE sessioni_doppia_spunta ADD COLUMN penalita DECIMAL(10,2) NULL COMMENT 'Penalità assoluta (abs(diff/uvc))' AFTER penalita_difetto",
+                    "diff": "ALTER TABLE sessioni_doppia_spunta ADD COLUMN diff DECIMAL(10,2) NULL COMMENT 'Valore differenza originale' AFTER tipo",
+                }
+                for col_name, alter_sql in extra_cols.items():
+                    try:
+                        cur.execute(
+                            """
+                                SELECT COUNT(*)
+                                FROM information_schema.COLUMNS
+                                WHERE TABLE_SCHEMA = DATABASE()
+                                  AND TABLE_NAME = 'sessioni_doppia_spunta'
+                                  AND COLUMN_NAME = %s
+                            """,
+                            (col_name,),
+                        )
+                        res = cur.fetchone()
+                        if res and res[0] == 0:
+                            print(f"[INFO] Colonna '{col_name}' assente: la aggiungo ora")
+                            cur.execute(alter_sql)
+                            conn.commit()
+                            print(f"[OK] Colonna '{col_name}' aggiunta (salvaguardia)")
+                    except Exception as exc:
+                        print(f"[WARN] Salvaguardia {col_name} fallita: {exc}")
+
+                # Elimina le sessioni esistenti per le stesse date/codici
+                date_codici = set((s['data'], s['codice_preparatore']) for s in sessioni)
+                print(f"[INFO] Eliminazione sessioni esistenti per {len(date_codici)} combinazioni data/codice...")
+                deleted_count = 0
+                for data, codice in date_codici:
+                    cur.execute(
+                        "DELETE FROM sessioni_doppia_spunta WHERE data = %s AND codice_preparatore = %s",
+                        (data, codice)
+                    )
+                    deleted_count += cur.rowcount
+                print(f"  [INFO] Eliminate {deleted_count} righe esistenti")
+
+                print(f"[INFO] Preparazione insert di {len(sessioni)} righe...")
+                
+                # Inserisci le nuove righe in batch per evitare timeout
+                BATCH_SIZE = 1000
+                total_inserted = 0
+                
+                for i in range(0, len(sessioni), BATCH_SIZE):
+                    batch = sessioni[i:i + BATCH_SIZE]
+                    cur.executemany(
+                    """
+                    INSERT INTO sessioni_doppia_spunta 
+                    (data, codice_preparatore, altro_codice, numero_riga, excel_row, ora_inizio, ora_fine, tempo_minuti,
+                     n_colli, uvc, qtasped, codpro, lotto, tipo, diff, penalita_eccesso, penalita_difetto, penalita,
+                     totale_colli_giornata, ore_gestionale_giornaliere)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    [
+                        (
+                            s['data'],
+                            s['codice_preparatore'],
+                            s.get('altro_codice'),
+                            s['numero_riga'],
+                            s.get('excel_row'),
+                            s.get('ora_inizio'),
+                            s.get('ora_fine'),
+                            s.get('tempo_minuti'),
+                            s['n_colli'],
+                            s.get('uvc'),
+                            s.get('qtasped'),
+                            s.get('codpro'),
+                            s.get('lotto'),
+                            s.get('tipo'),
+                            s.get('diff'),
+                            s.get('penalita_eccesso', 0),
+                            s.get('penalita_difetto', 0),
+                            s.get('penalita'),
+                            s.get('totale_colli_giornata'),
+                            s.get('ore_gestionale_giornaliere')
+                        )
+                        for s in batch
+                    ]
+                    )
+                    total_inserted += cur.rowcount
+                    print(f"  [INFO] Batch {i//BATCH_SIZE + 1}: inserite {cur.rowcount} righe (totale: {total_inserted}/{len(sessioni)})")
+                
+                conn.commit()
+                print(f"[OK] Salvate {total_inserted} righe in sessioni_doppia_spunta (transazione completata)")
+    except Exception as e:
+        import traceback
+        print(f"[ERROR] Errore in save_sessioni_doppia_spunta: {e}")
+        print(traceback.format_exc())
+        try:
+            if 'conn' in locals():
+                conn.rollback()
+                print("[INFO] Rollback eseguito - dati precedenti ripristinati")
+        except:
+            pass
+        raise
+
+
+def fetch_sessioni_doppia_spunta(
+    data_da: Optional[datetime.date] = None,
+    data_a: Optional[datetime.date] = None,
+    codice_preparatore: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    """Recupera i dettagli delle sessioni doppia spunta."""
+    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+        with closing(conn.cursor(dictionary=True)) as cur:
+            conditions = []
+            params = []
+            
+            if data_da:
+                conditions.append("data >= %s")
+                params.append(data_da)
+            if data_a:
+                conditions.append("data <= %s")
+                params.append(data_a)
+            if codice_preparatore:
+                conditions.append("codice_preparatore = %s")
+                params.append(codice_preparatore)
+            
+            where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
+            query = f"""
+                  SELECT id, data, codice_preparatore, numero_riga,
+                      excel_row, ora_inizio, ora_fine, tempo_minuti, n_colli, tipo,
+                      altro_codice, diff,
+                      penalita_eccesso, penalita_difetto, penalita,
+                       totale_colli_giornata, ore_gestionale_giornaliere,
+                       data_importazione
+                FROM sessioni_doppia_spunta
+                {where_clause}
+                ORDER BY data, codice_preparatore, numero_riga
+            """
+            cur.execute(query, params)
+            result = cur.fetchall()
+            return cast(List[Dict[str, Any]], result)
+
+
+def delete_sessioni_doppia_spunta(data: datetime.date, codice_preparatore: Optional[str] = None) -> None:
+    """Elimina le sessioni doppia spunta per una data (e opzionalmente un codice)."""
+    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+        with closing(conn.cursor()) as cur:
+            if codice_preparatore:
+                cur.execute(
+                    "DELETE FROM sessioni_doppia_spunta WHERE data = %s AND codice_preparatore = %s",
+                    (data, codice_preparatore)
+                )
+            else:
+                cur.execute(
+                    "DELETE FROM sessioni_doppia_spunta WHERE data = %s",
                     (data,)
                 )
             conn.commit()

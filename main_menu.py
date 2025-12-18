@@ -4,9 +4,6 @@ Interfaccia principale dell'applicazione con menu laterale
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-from updater import open_update_dialog
-from version import APP_VERSION
-
 
 class CollapsibleMenuSection(tk.Frame):
     """Sezione del menu laterale apribile e richiudibile."""
@@ -244,13 +241,6 @@ class MainMenu(tk.Tk):
                     ("perf_doppia_spunta", "Performance Doppia Spunta", self._show_performance_doppia_spunta),
                 ],
             ),
-            (
-                "Strumenti",
-                False,
-                [
-                    ("aggiorna_app", "Aggiorna Applicazione", self._show_update_dialog),
-                ],
-            ),
         ]
 
         for title, expanded, entries in sections_config:
@@ -280,7 +270,7 @@ class MainMenu(tk.Tk):
         # Info in basso
         info_label = tk.Label(
             menu_frame,
-            text=f"Versione {APP_VERSION}",
+            text="Versione 1.0",
             font=("Segoe UI", 9),
             bg=self.menu_bg,
             fg="#808080"
@@ -414,11 +404,6 @@ class MainMenu(tk.Tk):
                 f"Impossibile caricare il modulo Malus-Bonus:\n{exc}",
             )
 
-    def _show_update_dialog(self):
-        """Apre la finestra di aggiornamento applicazione."""
-        self._highlight_menu_button("aggiorna_app")
-        open_update_dialog(self)
-
     def _show_anomalie(self):
         """Mostra il modulo gestione anomalie"""
         self._clear_content()
@@ -475,30 +460,30 @@ class MainMenu(tk.Tk):
         self._clear_content()
         self._highlight_menu_button("premi_ricevimento")
 
-        self.current_frame = ttk.Frame(self.content_frame)
-        self.current_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        try:
+            from premi_ricevitori_view import PremiRicevitoriView
 
-        tk.Label(
-            self.current_frame,
-            text="🏆 Premi Ricevimento\n\nModulo in sviluppo...",
-            font=("Segoe UI", 16),
-            fg="#007acc"
-        ).pack(expand=True)
+            self.current_frame = PremiRicevitoriView(self.content_frame)
+        except Exception as exc:
+            messagebox.showerror(
+                "Errore",
+                f"Impossibile caricare il modulo Premi Ricevimento:\n{exc}",
+            )
 
     def _show_premi_doppia_spunta(self):
         """Mostra il modulo calcolo premi doppia spunta"""
         self._clear_content()
         self._highlight_menu_button("premi_doppia_spunta")
 
-        self.current_frame = ttk.Frame(self.content_frame)
-        self.current_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        try:
+            from premi_doppia_spunta_view import PremiDoppiaSpuntaView
 
-        tk.Label(
-            self.current_frame,
-            text="� Premi Doppia Spunta\n\nModulo in sviluppo...",
-            font=("Segoe UI", 16),
-            fg="#007acc"
-        ).pack(expand=True)
+            self.current_frame = PremiDoppiaSpuntaView(self.content_frame)
+        except Exception as exc:
+            messagebox.showerror(
+                "Errore",
+                f"Impossibile caricare il modulo Premi Doppia Spunta:\n{exc}",
+            )
 
     def _show_performance_carrellisti(self):
         """Mostra il modulo performance carrellisti (placeholder)."""
@@ -516,19 +501,19 @@ class MainMenu(tk.Tk):
         ).pack(expand=True)
 
     def _show_performance_preparatori(self):
-        """Mostra il modulo performance preparatori (placeholder)."""
+        """Mostra il modulo performance dedicato ai preparatori."""
         self._clear_content()
         self._highlight_menu_button("perf_preparatori")
 
-        self.current_frame = ttk.Frame(self.content_frame)
-        self.current_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        try:
+            from performance_preparatori_view import PerformancePreparatoriView
 
-        tk.Label(
-            self.current_frame,
-            text="📈 Performance Preparatori\n\nModulo in sviluppo...",
-            font=("Segoe UI", 16),
-            fg="#007acc",
-        ).pack(expand=True)
+            self.current_frame = PerformancePreparatoriView(self.content_frame)
+        except Exception as exc:
+            messagebox.showerror(
+                "Errore",
+                f"Impossibile caricare il modulo Performance Preparatori:\n{exc}",
+            )
 
     def _show_performance_ricevimento(self):
         """Mostra il modulo performance ricevimento (placeholder)."""

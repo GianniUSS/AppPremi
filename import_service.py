@@ -9,7 +9,12 @@ import tkinter as tk
 from tkinter import messagebox, IntVar
 from tkinter import ttk
 
-from database import ensure_table_and_indexes, insert_batch_data, update_penalita_picking
+from database import (
+    ensure_table_and_indexes,
+    insert_batch_data,
+    update_penalita_picking,
+    get_penalita_picking_from_sessioni,
+)
 from parsers import (
     parse_preparatori,
     parse_carrelisti,
@@ -87,22 +92,30 @@ class ImportService:
                     status_label,
                     root,
                 )
-                update_values = [
-                    (
-                        row["data"],
-                        str(row["codice_preparatore"]),
-                        int(row["penalita"]),
-                    )
-                    for _, row in penalita_picking_df.iterrows()
-                ]
+                # Fonte certa: ricalcola dal DB (sessioni_doppia_spunta), usando la regola "solo codice a sinistra"
+                date_list = []
+                for d in penalita_picking_df["data"].unique().tolist():
+                    try:
+                        if hasattr(d, "to_pydatetime"):
+                            date_list.append(d.to_pydatetime().date())
+                        elif isinstance(d, datetime.datetime):
+                            date_list.append(d.date())
+                        elif isinstance(d, datetime.date):
+                            date_list.append(d)
+                        elif isinstance(d, str):
+                            date_list.append(datetime.date.fromisoformat(d))
+                    except Exception:
+                        pass
+
+                update_values = get_penalita_picking_from_sessioni(date_list)
                 updated = update_penalita_picking(update_values)
                 if updated < len(update_values):
                     print(
-                        f"⚠️ Penalità PICKING aggiornate parzialmente: {updated}/{len(update_values)}"
+                        f"[WARN] Penalita' PICKING aggiornate parzialmente: {updated}/{len(update_values)}"
                     )
                 else:
                     print(
-                        f"✓ Penalità PICKING aggiornate: {updated}/{len(update_values)}"
+                        f"[OK] Penalita' PICKING aggiornate: {updated}/{len(update_values)}"
                     )
 
             # Completamento
@@ -175,7 +188,7 @@ class ImportService:
         minutes = int(elapsed_seconds // 60)
         seconds = int(elapsed_seconds % 60)
         time_str = f"{minutes}m {seconds}s" if minutes > 0 else f"{seconds}s"
-        status_label.config(text=f"Importazione completata ✅ ({time_str})")
+        status_label.config(text=f"Importazione completata OK ({time_str})")
         messagebox.showinfo("Successo", f"Importazione completata in {time_str}\n\nRecord importati: {records_count}")
 
     def _show_error(self, error_message: str, status_label: ttk.Label):

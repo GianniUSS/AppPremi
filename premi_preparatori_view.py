@@ -1,12 +1,16 @@
 """Interfaccia per il calcolo dei premi preparatori."""
 import datetime
+from contextlib import closing
 from decimal import Decimal, ROUND_HALF_UP
-from typing import Any, Dict, List, Optional, Tuple
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import filedialog, messagebox, ttk
 
-from config import COLORS, FONTS
+import mysql.connector
+
+from config import COLORS, FONTS, MYSQL_CONFIG
 from database import (
     fetch_fasce_premi,
     fetch_premi_preparatori,
@@ -43,6 +47,7 @@ class PremiPreparatoriView(tk.Frame):
         self.anno_var = tk.StringVar(value=str(today.year))
         self.mese_var = tk.StringVar(value=MONTH_CHOICES[today.month - 1][0])
         self.codice_var = tk.StringVar()
+        self._current_premi: List[Dict[str, Any]] = []
 
         self._build_ui()
         self._carica_premi()
@@ -134,6 +139,14 @@ class PremiPreparatoriView(tk.Frame):
             width=16,
         ).grid(row=0, column=7, padx=(6, 12), pady=10)
 
+        create_button(
+            filter_frame,
+            text="Export Excel",
+            command=self._export_premi_excel,
+            variant="secondary",
+            width=14,
+        ).grid(row=0, column=8, padx=(6, 12), pady=10)
+
         for col in [1, 3, 5]:
             filter_frame.grid_columnconfigure(col, weight=1)
 
@@ -178,10 +191,12 @@ class PremiPreparatoriView(tk.Frame):
             "colli_ora": "Colli/h",
             "fascia": "Fascia",
             "premio_base": "Premio Base (EUR)",
-              "penalita": "Penalita (EUR)",
-              "premio_kpi": "Premio KPI (EUR)",
-              "premio_totale": "Premio Totale (EUR)",
+            "penalita": "Penalità Totale (EUR)",
+            "premio_kpi": "Premio KPI (EUR)",
+            "premio_totale": "Premio Totale (EUR)",
         }
+
+        self._tree_headers = headers
 
         for col, title in headers.items():
             self.tree.heading(col, text=title)
@@ -214,6 +229,152 @@ class PremiPreparatoriView(tk.Frame):
         )
         self.stats_label.pack(side="left", padx=12, pady=10)
 
+
+    def _export_premi_excel(self) -> None:
+        """Esporta l'elenco premi corrente in Excel."""
+        rows = self._collect_tree_rows()
+        if not rows:
+            messagebox.showinfo(
+                "Nessun dato",
+                "Non ci sono premi da esportare. Usa 'Aggiorna' o 'Calcola Premi'.",
+                parent=self,
+            )
+            return
+
+        anno = self.anno_var.get().strip() or "XXXX"
+        mese = (self.mese_var.get().strip() or "Mese").replace(" ", "_")
+        default_name = f"Premi_Preparatori_{anno}_{mese}.xlsx"
+
+        file_path = filedialog.asksaveasfilename(
+            title="Esporta premi in Excel",
+            defaultextension=".xlsx",
+            filetypes=[("File Excel", "*.xlsx"), ("Tutti i file", "*.*")],
+            initialdir=str(Path.home()),
+            initialfile=default_name,
+        )
+
+        if not file_path:
+            return
+
+        try:
+            import pandas as pd
+            from openpyxl.utils import get_column_letter
+            from openpyxl.styles import Alignment
+
+            # Converte i valori stringa in numeri dove possibile
+            numeric_cols = {
+                "Tot. Colli", "Ore", "Colli/h",
+                "Premio Base (EUR)", "Penalità Totale (EUR)",
+                "Premio KPI (EUR)", "Premio Totale (EUR)",
+            }
+
+            def parse_numeric(val):
+                if val is None or val == "":
+                    return 0.0
+                try:
+                    # Rimuove eventuali separatori migliaia e converte
+                    cleaned = str(val).replace(" ", "").replace(",", ".")
+                    return float(cleaned)
+                except (ValueError, TypeError):
+                    return val
+
+            processed_rows = []
+            for row in rows:
+                new_row = {}
+                for key, val in row.items():
+                    if key in numeric_cols:
+                        new_row[key] = parse_numeric(val)
+                    else:
+                        new_row[key] = val
+                processed_rows.append(new_row)
+
+            df = pd.DataFrame(processed_rows)
+
+            with pd.ExcelWriter(file_path, engine="openpyxl") as writer:
+                sheet_name = "Premi Preparatori"
+                df.to_excel(writer, index=False, sheet_name=sheet_name)
+                sheet = writer.sheets[sheet_name]
+
+                # Formati numerici: "General" mostra il numero senza decimali inutili
+                # Per i valori monetari/decimali usiamo formato condizionale
+                format_int = "#,##0"           # Interi con separatore migliaia
+                # Formato condizionale: se intero mostra senza decimali, altrimenti max 2
+                format_auto = "0.00;-0.00;0"
+
+                col_formats = {
+                    "Tot. Colli": format_int,
+                    "Ore": format_auto,
+                    "Colli/h": format_auto,
+                    "Premio Base (EUR)": format_auto,
+                    "Penalità Totale (EUR)": format_auto,
+                    "Premio KPI (EUR)": format_auto,
+                    "Premio Totale (EUR)": format_auto,
+                }
+
+                right_align = Alignment(horizontal="right")
+
+                # Auto-dimensiona le colonne e applica formati
+                for col_idx, column_name in enumerate(df.columns, start=1):
+                    column_letter = get_column_letter(col_idx)
+                    # Larghezza = max tra header e valori + margine
+                    max_length = len(str(column_name))
+                    for cell in sheet[column_letter][1:]:
+                        try:
+                            cell_len = len(str(cell.value)) if cell.value else 0
+                            if cell_len > max_length:
+                                max_length = cell_len
+                        except Exception:
+                            pass
+                    sheet.column_dimensions[column_letter].width = max_length + 3
+
+                    # Applica formato numerico e allineamento
+                    if column_name in col_formats:
+                        for row_idx in range(2, len(df) + 2):
+                            cell = sheet.cell(row=row_idx, column=col_idx)
+                            val = cell.value
+                            # Se è un intero, usa formato intero; altrimenti decimale
+                            if column_name != "Tot. Colli":
+                                try:
+                                    if val is not None and float(val) == int(val):
+                                        cell.number_format = format_int
+                                    else:
+                                        cell.number_format = format_auto
+                                except (ValueError, TypeError):
+                                    cell.number_format = format_auto
+                            else:
+                                cell.number_format = format_int
+                            cell.alignment = right_align
+
+                sheet.freeze_panes = "A2"
+
+            messagebox.showinfo(
+                "Export completato",
+                f"File salvato in:\n{file_path}",
+                parent=self,
+            )
+        except Exception as exc:
+            messagebox.showerror(
+                "Errore",
+                f"Esportazione non riuscita:\n{exc}",
+                parent=self,
+            )
+
+    def _collect_tree_rows(self) -> List[Dict[str, Any]]:
+        """Restituisce i dati mostrati nella tabella con header leggibili."""
+        columns = list(self.tree["columns"])
+        headers = [self._tree_headers.get(col, col) for col in columns]
+        data: List[Dict[str, Any]] = []
+
+        for item_id in self.tree.get_children():
+            values = self.tree.item(item_id, "values")
+            row = {
+                headers[idx]: values[idx] if idx < len(values) else ""
+                for idx in range(len(columns))
+            }
+            data.append(row)
+
+        return data
+
     def _carica_premi(self) -> None:
         """Carica i premi salvati dal database."""
         anno_str = self.anno_var.get().strip()
@@ -231,6 +392,7 @@ class PremiPreparatoriView(tk.Frame):
 
         try:
             premi = fetch_premi_preparatori(anno, mese, codice_filtro)
+            self._current_premi = premi.copy()
 
             for item in self.tree.get_children():
                 self.tree.delete(item)
@@ -287,6 +449,7 @@ class PremiPreparatoriView(tk.Frame):
                         f" | Penalita: EUR {totale_penalita:,.2f} | Bonus KPI: {bonus_text}"
                     )
                 )
+
         except Exception as exc:
             messagebox.showerror(
                 "Errore",
@@ -428,17 +591,18 @@ class PremiPreparatoriView(tk.Frame):
                 SUM(dp.totale_colli) AS totale_colli,
                 SUM(dp.ore_tim) AS ore_tim,
                 SUM(dp.ore_gestionale) AS ore_gestionale,
-                SUM(dp.penalita) AS penalita_totale
+                SUM(dp.penalita_totale) AS penalita_totale
             FROM dati_produzione dp
             WHERE dp.tipo_attivita = 'PICKING'
                 AND YEAR(dp.data) = %s
                 AND MONTH(dp.data) = %s
                 AND NOT EXISTS (
                     SELECT 1 FROM anomalie a
-                    WHERE a.tipo_anomalia = 'PRODUZIONE_SENZA_ORE'
+                    WHERE a.tipo_anomalia IN ('PRODUZIONE_SENZA_ORE', 'ORE_SENZA_PRODUZIONE')
                         AND a.data_rilevamento = dp.data
                         AND a.codice_preparatore = dp.codice_preparatore
                         AND a.tipo_attivita = dp.tipo_attivita
+                        AND COALESCE(a.stato, 'APERTA') NOT IN ('RISOLTA', 'VERIFICATA')
                 )
         """
         params: List[Any] = [anno, mese]
@@ -460,10 +624,15 @@ class PremiPreparatoriView(tk.Frame):
                     codice = str(row.get("codice_preparatore") or "")
                     nome = str(row.get("nome_preparatore") or "")
                     totale_colli = Decimal(str(row.get("totale_colli") or 0))
-                    ore_tim = Decimal(str(row.get("ore_tim") or 0))
-                    ore_gest = Decimal(str(row.get("ore_gestionale") or 0))
+                    # ⚠️ IMPORTANTE: ore_tim e ore_gestionale sono in MINUTI nel DB
+                    minuti_tim = Decimal(str(row.get("ore_tim") or 0))
+                    minuti_gest = Decimal(str(row.get("ore_gestionale") or 0))
                     penalita = Decimal(str(row.get("penalita_totale") or 0))
 
+                    # Converti minuti → ore
+                    ore_tim = minuti_tim / Decimal("60")
+                    ore_gest = minuti_gest / Decimal("60")
+                    
                     # I premi preparatori utilizzano le ore_tim come riferimento orario
                     ore_effettive = ore_tim
                     if ore_effettive <= 0:

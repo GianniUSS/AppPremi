@@ -563,7 +563,8 @@ class AnomalieView:
 
         for anomalia in anomalie:
             ore_tim = anomalia.get("ore_tim")
-            ore_str = f"{float(ore_tim):.2f}" if ore_tim is not None else ""
+            # Converti minuti → ore per la visualizzazione
+            ore_str = f"{float(ore_tim)/60:.2f}" if ore_tim is not None else ""
             
             # Usa anno e mese dal database se disponibili, altrimenti dalla data_rilevamento
             anno = anomalia.get("anno")

@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional, cast
 import mysql.connector
 
 from config import COLORS, FONTS, MYSQL_CONFIG, MYSQL_CONFIG_MAIN, TABLE_NAME
-from database import load_nuove_aperture, save_nuove_aperture
+from database import fetch_all_nuove_aperture, load_nuove_aperture, save_nuove_aperture
 from ui_components import create_button
 
 
@@ -215,7 +215,6 @@ class DataViewer:
         self.use_date_filter_var.set(False)
         self.date_filter_check.state(["!selected"])
 
-
         from tkcalendar import DateEntry
         ttk.Label(
             filter_row,
@@ -263,7 +262,7 @@ class DataViewer:
             "Codice",
             "Nome",
             "Colli",
-            "Penalità",
+            "Penalità Totale",
             "Tipo Attività",
             "Tipo",
             "Ore TIM",
@@ -281,7 +280,7 @@ class DataViewer:
         vsb.config(command=self.tree.yview)
         hsb.config(command=self.tree.xview)
 
-        widths = [60, 100, 120, 200, 80, 80, 140, 150, 100, 120]
+        widths = [60, 100, 120, 200, 80, 100, 140, 150, 100, 120]
         for col, width in zip(columns, widths):
             self.tree.heading(col, text=col, command=lambda c=col: self._sort_by_column(c))
             anchor = "w" if col == "Nome" else "center"
@@ -370,6 +369,60 @@ class DataViewer:
             self.date_da_entry.configure(state="disabled")
             self.date_a_entry.configure(state="disabled")
 
+    def _build_sync_filter_clause(
+        self,
+        filters: Optional[Dict[str, Any]],
+        alias: str = "dati_produzione",
+        use_where: bool = True,
+    ) -> tuple[str, List[Any]]:
+        """Crea la clausola SQL per riutilizzare sempre i filtri della vista."""
+        filters = filters or {}
+        conditions: List[str] = []
+        params: List[Any] = []
+
+        search_text = (filters.get("search") or "").strip()
+        if search_text:
+            like = f"%{search_text}%"
+            conditions.append(
+                "("  # search per codice, nome o tipo
+                f"LOWER({alias}.codice_preparatore) LIKE LOWER(%s) "
+                f"OR LOWER({alias}.nome_preparatore) LIKE LOWER(%s) "
+                f"OR LOWER({alias}.tipo_attivita) LIKE LOWER(%s)"
+                ")"
+            )
+            params.extend([like, like, like])
+
+        tipo_attivita = filters.get("tipo_attivita")
+        if tipo_attivita and tipo_attivita != "Tutti":
+            conditions.append(f"{alias}.tipo_attivita = %s")
+            params.append(tipo_attivita)
+
+        if filters.get("use_date_filter"):
+            data_da = (filters.get("data_da") or "").strip()
+            if data_da:
+                conditions.append(f"{alias}.data >= %s")
+                params.append(data_da)
+            data_a = (filters.get("data_a") or "").strip()
+            if data_a:
+                conditions.append(f"{alias}.data <= %s")
+                params.append(data_a)
+        else:
+            anno = (filters.get("anno") or "").strip() if filters.get("anno") else None
+            if anno:
+                conditions.append(f"YEAR({alias}.data) = %s")
+                params.append(str(anno))
+            mese = filters.get("mese")
+            if mese:
+                conditions.append(f"MONTH({alias}.data) = %s")
+                params.append(str(mese))
+
+        if not conditions:
+            return "", []
+
+        prefix = " WHERE " if use_where else " AND "
+        clause = prefix + " AND ".join(conditions)
+        return clause, params
+
     def _on_filter_mode_toggle(self) -> None:
         self._update_filter_states()
         self._load_data(self._collect_filters())
@@ -388,7 +441,7 @@ class DataViewer:
 
             query = (
                 "SELECT id, data, codice_preparatore, nome_preparatore, totale_colli, "
-                "penalita, tipo_attivita, tipo, ore_tim, ore_gestionale FROM "
+                "penalita_totale, tipo_attivita, tipo, ore_tim, ore_gestionale FROM "
                 f"{TABLE_NAME}"
             )
             conditions: List[str] = []
@@ -432,58 +485,75 @@ class DataViewer:
 
             query += " ORDER BY data DESC, id DESC LIMIT 1000"
 
+            # Query aggregata per i totali (stessi filtri, senza LIMIT)
+            totals_query = (
+                "SELECT COUNT(*) AS n, "
+                "COALESCE(SUM(totale_colli), 0) AS sum_colli, "
+                "COALESCE(SUM(penalita_totale), 0) AS sum_pen, "
+                "COALESCE(SUM(ore_tim), 0) AS sum_ore_tim, "
+                "COALESCE(SUM(ore_gestionale), 0) AS sum_ore_gest "
+                f"FROM {TABLE_NAME}"
+            )
+            if conditions:
+                totals_query += " WHERE " + " AND ".join(conditions)
+
             with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
                 with closing(conn.cursor(dictionary=True)) as cur:
                     cur.execute(query, params)
                     rows = cast(List[Dict[str, Any]], cur.fetchall())
 
-            total_colli = 0
-            total_penalita = 0
-            total_ore = 0.0
-            total_ore_gestionale = 0.0
+                    cur.execute(totals_query, params)
+                    totals = cast(Dict[str, Any], cur.fetchone() or {})
+
+            total_records = int(float(totals.get("n") or 0))
+            total_colli_db = 0
+            total_penalita_totale_db = 0.0
+            total_ore_db = 0.0
+            total_ore_gestionale_db = 0.0
+            try:
+                total_colli_db = int(float(totals.get("sum_colli") or 0))
+            except (TypeError, ValueError):
+                pass
+            try:
+                total_penalita_totale_db = float(totals.get("sum_pen") or 0)
+            except (TypeError, ValueError):
+                pass
+            try:
+                total_ore_db = float(totals.get("sum_ore_tim") or 0)
+            except (TypeError, ValueError):
+                pass
+            try:
+                total_ore_gestionale_db = float(totals.get("sum_ore_gest") or 0)
+            except (TypeError, ValueError):
+                pass
 
             for idx, row in enumerate(rows):
+                # Converti minuti → ore per la visualizzazione
+                ore_tim_display = (row.get("ore_tim", 0) or 0) / 60
+                ore_gest_display = (row.get("ore_gestionale", 0) or 0) / 60
+                penalita_totale = row.get("penalita_totale") or 0
+                
                 values = (
                     row.get("id"),
                     row.get("data"),
                     row.get("codice_preparatore"),
                     row.get("nome_preparatore"),
                     row.get("totale_colli"),
-                    row.get("penalita"),
+                    f"{float(penalita_totale):.2f}",
                     row.get("tipo_attivita"),
                     row.get("tipo"),
-                    row.get("ore_tim", 0),
-                    row.get("ore_gestionale", 0),
+                    f"{ore_tim_display:.2f}",
+                    f"{ore_gest_display:.2f}",
                 )
                 tag = "evenrow" if idx % 2 == 0 else "oddrow"
                 self.tree.insert("", "end", values=values, tags=(tag,))
 
-                colli = row.get("totale_colli") or 0
-                penalita = row.get("penalita") or 0
-                ore_tim = row.get("ore_tim") or 0
-                ore_gestionale = row.get("ore_gestionale") or 0
-                try:
-                    total_colli += int(float(colli))
-                except (TypeError, ValueError):
-                    pass
-                try:
-                    total_penalita += int(float(penalita))
-                except (TypeError, ValueError):
-                    pass
-                try:
-                    total_ore += float(ore_tim)
-                except (TypeError, ValueError):
-                    pass
-                try:
-                    total_ore_gestionale += float(ore_gestionale)
-                except (TypeError, ValueError):
-                    pass
-
+            # Converti totali da minuti a ore per il display
             self.stats_label.config(
                 text=(
-                    f"📈 Record trovati: {len(rows)} | Totale Ore TIM: {total_ore:.2f} | "
-                    f"Totale Ore Gestionale: {total_ore_gestionale:.2f} | "
-                    f"Totale Colli: {total_colli:,} | Totale Penalità: {total_penalita:,}"
+                    f"📈 Record mostrati: {len(rows)}/{total_records} | Totale Ore TIM: {total_ore_db/60:.2f} | "
+                    f"Totale Ore Gestionale: {total_ore_gestionale_db/60:.2f} | "
+                    f"Totale Colli: {total_colli_db:,} | Penalità Totali: {total_penalita_totale_db:.2f}"
                 )
             )
         except Exception as exc:
@@ -564,9 +634,10 @@ class DataViewer:
             f"Codice Preparatore: {values[2]}\n"
             f"Nome Preparatore: {values[3]}\n"
             f"Totale Colli: {values[4]}\n"
-            f"Penalità: {values[5]}\n"
-            f"Tipo Attività: {values[6]}\n"
-            f"Tipo: {values[7]}"
+            f"Penalità Eccesso: {values[5]}\n"
+            f"Penalità Difetto: {values[6]}\n"
+            f"Tipo Attività: {values[7]}\n"
+            f"Tipo: {values[8]}"
         )
         messagebox.showinfo("Dettagli Record", details)
 
@@ -895,8 +966,14 @@ class DataViewer:
 
     def _perform_sync_with_progress(self) -> Dict[str, Any]:
         """Logica di sincronizzazione con avanzamento progressivo."""
-        
-        # Step 1: Leggi i codici e tipi da dati_produzione CON I FILTRI APPLICATI
+        active_filters = self._last_filters.copy() if isinstance(self._last_filters, dict) else {}
+
+        # La sincronizzazione (e la rigenerazione anomalie) deve considerare tutte le attività
+        # nel periodo selezionato, indipendentemente dal filtro "Tipo Attività" nella vista.
+        sync_filters = active_filters.copy()
+        sync_filters["tipo_attivita"] = "Tutti"
+
+        # Step 1: Leggi i codici e tipi da dati_produzione (ignora filtro Tipo Attività)
         local_records = []
         try:
             with closing(mysql.connector.connect(**MYSQL_CONFIG)) as local_conn:
@@ -909,35 +986,17 @@ class DataViewer:
                           AND tipo_attivita IS NOT NULL
                           AND data IS NOT NULL
                     """
-                    conditions: List[str] = []
                     params: List[Any] = []
-                    
-                    # Applica gli stessi filtri della visualizzazione
-                    if self._last_filters:
-                        if self._last_filters.get("data_da"):
-                            conditions.append("data >= %s")
-                            params.append(self._last_filters["data_da"])
-                        if self._last_filters.get("data_a"):
-                            conditions.append("data <= %s")
-                            params.append(self._last_filters["data_a"])
-                        if self._last_filters.get("codice"):
-                            conditions.append("LOWER(codice_preparatore) LIKE LOWER(%s)")
-                            params.append(f"%{self._last_filters['codice']}%")
-                        if self._last_filters.get("nome"):
-                            conditions.append("LOWER(nome_preparatore) LIKE LOWER(%s)")
-                            params.append(f"%{self._last_filters['nome']}%")
-                        tipo_filter = self._last_filters.get("tipo_attivita")
-                        if tipo_filter and tipo_filter != "Tutti":
-                            conditions.append("tipo_attivita = %s")
-                            params.append(tipo_filter)
-                        search_term = (self._last_filters.get("search") or "").strip()
-                        if search_term:
-                            conditions.append("(LOWER(codice_preparatore) LIKE LOWER(%s) OR LOWER(nome_preparatore) LIKE LOWER(%s))")
-                            params.extend([f"%{search_term}%", f"%{search_term}%"])
-                    
-                    if conditions:
-                        query += " AND " + " AND ".join(conditions)
-                    
+
+                    filter_clause, filter_params = self._build_sync_filter_clause(
+                        sync_filters,
+                        alias="dati_produzione",
+                        use_where=False,
+                    )
+                    if filter_clause:
+                        query += filter_clause
+                        params.extend(filter_params)
+
                     local_cursor.execute(query, params)
                     local_records = cast(List[Dict[str, Any]], local_cursor.fetchall())
         except mysql.connector.Error as err:
@@ -956,6 +1015,56 @@ class DataViewer:
                 "mapping_warning": False,
             }
 
+        # Determina il periodo interessato dal sync per poter rigenerare le anomalie
+        date_values: List[datetime.date] = []
+        for record in local_records:
+            data_val = record.get("data")
+            data_norm: Optional[datetime.date] = None
+            if isinstance(data_val, datetime.datetime):
+                data_norm = data_val.date()
+            elif isinstance(data_val, datetime.date):
+                data_norm = data_val
+            elif isinstance(data_val, str):
+                try:
+                    data_norm = datetime.datetime.strptime(data_val, "%Y-%m-%d").date()
+                except ValueError:
+                    continue
+
+            if data_norm:
+                date_values.append(data_norm)
+
+        if date_values:
+            periodo_da = min(date_values)
+            periodo_a = max(date_values)
+            tipi_da_pulire = (
+                "CODICE_NON_ABBINATO",
+                "ORE_SENZA_PRODUZIONE",
+                "PRODUZIONE_SENZA_ORE",
+                "DIFFERENZA_60_120",
+                "DIFFERENZA_>120",
+            )
+            placeholder_tipi = ", ".join(["%s"] * len(tipi_da_pulire))
+            delete_sql = f"""
+                DELETE FROM anomalie
+                WHERE data_rilevamento BETWEEN %s AND %s
+                  AND tipo_anomalia IN ({placeholder_tipi})
+            """
+            delete_params: List[Any] = [periodo_da, periodo_a]
+            delete_params.extend(tipi_da_pulire)
+
+            try:
+                with closing(mysql.connector.connect(**MYSQL_CONFIG)) as del_conn:
+                    with closing(del_conn.cursor()) as del_cursor:
+                        print(
+                            f"🧹 Pulizia anomalie esistenti dal {periodo_da} al {periodo_a} prima della rigenerazione..."
+                        )
+                        del_cursor.execute(delete_sql, delete_params)
+                        eliminati = del_cursor.rowcount
+                        del_conn.commit()
+                        print(f"   → Eliminati {eliminati} record di anomalie nel periodo selezionato")
+            except mysql.connector.Error as err:
+                print(f"⚠️ Errore durante la pulizia delle anomalie pregresse: {err}")
+
         aggiornati = 0
         non_trovati_dettaglio: List[Dict[str, Any]] = []  # Codici non trovati in TIM
         anomalie_ore_count = 0
@@ -968,17 +1077,70 @@ class DataViewer:
         from database import insert_anomalia
         today = datetime.date.today()
 
+        nuove_aperture_ranges: Dict[str, List[tuple[datetime.date, datetime.date]]] = {}
+
+        def _to_date(value: Any) -> Optional[datetime.date]:
+            if isinstance(value, datetime.datetime):
+                return value.date()
+            if isinstance(value, datetime.date):
+                return value
+            if isinstance(value, str):
+                value = value.strip()
+                if not value:
+                    return None
+                try:
+                    return datetime.datetime.strptime(value[:10], "%Y-%m-%d").date()
+                except ValueError:
+                    return None
+            return None
+
+        def _is_nuova_apertura(negozio: Optional[str], data_val: Optional[datetime.date]) -> bool:
+            if not negozio or not data_val:
+                return False
+            negozio_key = str(negozio).strip().upper()
+            if not negozio_key:
+                return False
+            ranges = nuove_aperture_ranges.get(negozio_key)
+            if not ranges:
+                return False
+            for data_da, data_a in ranges:
+                if data_da <= data_val <= data_a:
+                    return True
+            return False
+
+        try:
+            nuove_aperture_rows = fetch_all_nuove_aperture()
+        except mysql.connector.Error as err:
+            print(f"⚠️ Errore durante il caricamento delle nuove aperture: {err}")
+            nuove_aperture_rows = []
+
+        for row in nuove_aperture_rows:
+            negozio = str(row.get("negozio") or "").strip().upper()
+            if not negozio:
+                continue
+            data_da = _to_date(row.get("data_da"))
+            data_a = _to_date(row.get("data_a"))
+            if not data_da or not data_a:
+                continue
+            nuove_aperture_ranges.setdefault(negozio, []).append((data_da, data_a))
+
         # Step 3: OTTIMIZZAZIONE - Recupera TUTTE le durate da TIM in una query
         try:
             with closing(mysql.connector.connect(**MYSQL_CONFIG)) as app_conn:
                 with closing(app_conn.cursor(dictionary=True)) as app_cursor:
-                    # Mappa tipo_attivita locale -> tipo_attivita_id TIM
+                    # Mappa tipo_attivita locale -> tipo_attivita TIM
                     tipo_mapping = {
                         "PICKING": "PICKING",
                         "CARRELLISTI": "CARRELLISTI",
                         "RICEVITORI": "MAG. RICEVIMENTO",
-                        "DOPPIA_SPUNTA": "DOPPIA SPUNTA"
+                        "MAGAZZINIERI": "MAG. SPEDIZIONE",
+                        "DOPPIA_SPUNTA": "DOPPIA SPUNTA",
+                        "CONTROLLO": "CONTROLLO",
+                        "UTE": "U.T.E",
+                        "DT7": "D.T.7",
                     }
+                    # Mappa inversa: tipo_attivita TIM -> tipo_attivita locale (per anomalie)
+                    reverse_tipo_mapping = {tim: local for local, tim in tipo_mapping.items()}
                     
                     with closing(mysql.connector.connect(**MYSQL_CONFIG_MAIN)) as tim_conn:
                         with closing(tim_conn.cursor(dictionary=True)) as tim_cursor:
@@ -1031,7 +1193,18 @@ class DataViewer:
                                            %s AS data_riferimento,
                                            u.nome,
                                            u.cognome,
-                                           COALESCE(SUM(a.durata), 0) AS durata_totale
+                                           COALESCE(
+                                               SUM(
+                                                   CASE
+                                                       WHEN a.data_inizio IS NOT NULL AND a.data_fine IS NOT NULL THEN GREATEST(
+                                                           TIMESTAMPDIFF(MINUTE, a.data_inizio, a.data_fine) - COALESCE(a.pausa, 0),
+                                                           0
+                                                       )
+                                                       ELSE 0
+                                                   END
+                                               ),
+                                               0
+                                           ) AS durata_totale
                                     FROM codicegestionale cg
                                     JOIN utente u ON cg.utente_id = u.id
                                     JOIN tipoattivita ta ON cg.tipo_attivita_id = ta.id
@@ -1085,43 +1258,78 @@ class DataViewer:
                                     except ValueError:
                                         data_anomalia = today
                                     
+                                    tipo_locale = reverse_tipo_mapping.get(tipo_tim, tipo_tim)
+
                                     insert_anomalia(
                                         tipo_anomalia="CODICE_NON_ABBINATO",
                                         data_rilevamento=data_anomalia,
                                         codice_preparatore=codice,
                                         nome_preparatore=nome_pulito,
-                                        tipo_attivita=tipo_tim,
+                                        tipo_attivita=tipo_locale,
                                         ore_tim=None,
                                         dettagli=f"Data: {data_str} - Codice non trovato in TIM",
                                         note=None,
                                     )
 
                             print(f"✅ Recuperate durate per {len(durate_map)} combinazioni codice/tipo/data")
+
+                            # Presenza codice in TIM per giorno (indipendente dall'attività).
+                            # Serve per non bloccare le anomalie (es. CARRELLISTI) quando TIM
+                            # non restituisce la durata per quello specifico tipo_attivita.
+                            tim_presenza_giorno: set[tuple[str, str]] = {
+                                (codice_upper, data_str) for (codice_upper, _tipo, data_str) in durate_map.keys()
+                            }
                             
                             # Recupera TUTTI i colli in una query
                             print("🚀 Recupero TUTTI i colli locali...")
                             
-                            app_cursor.execute("""
+                            records_query = """
                                 SELECT codice_preparatore, tipo_attivita, data, tipo, totale_colli
                                 FROM dati_produzione
-                            """)
+                            """
+                            records_clause, records_params = self._build_sync_filter_clause(
+                                sync_filters,
+                                alias="dati_produzione",
+                                use_where=True,
+                            )
+                            if records_clause:
+                                records_query += records_clause
+
+                            app_cursor.execute(records_query, records_params)
                             all_records = cast(List[Dict[str, Any]], app_cursor.fetchall())
                             
                             # Raggruppa per (codice, tipo_attivita, data)
                             colli_map = {}  # (codice, tipo, data) -> [(tipo_negozio, colli)]
+                            colli_validi_map: Dict[tuple[str, str, str], float] = {}
                             for row in all_records:
-                                codice = str(row.get("codice_preparatore") or "")
-                                tipo_att = str(row.get("tipo_attivita") or "")
-                                data = str(row.get("data") or "")
+                                codice = str(row.get("codice_preparatore") or "").strip()
+                                tipo_att = str(row.get("tipo_attivita") or "").strip()
                                 tipo_negozio = row.get("tipo")
                                 colli = row.get("totale_colli") or 0
-                                
+
+                                data_rif = _to_date(row.get("data"))
+                                data_str = (
+                                    data_rif.strftime("%Y-%m-%d")
+                                    if data_rif
+                                    else str(row.get("data") or "").strip()
+                                )
+
                                 tipo_tim = tipo_mapping.get(tipo_att)
-                                if codice and tipo_tim and data:
-                                    key = (codice.upper(), tipo_tim, data)
-                                    if key not in colli_map:
-                                        colli_map[key] = []
-                                    colli_map[key].append((codice, tipo_att, tipo_negozio, colli))
+                                if not (codice and tipo_tim and data_str):
+                                    continue
+
+                                key = (codice.upper(), tipo_tim, data_str)
+                                if key not in colli_map:
+                                    colli_map[key] = []
+                                colli_map[key].append((codice, tipo_att, tipo_negozio, colli))
+
+                                is_nuova = False
+                                if tipo_att == "DOPPIA_SPUNTA":
+                                    is_nuova = _is_nuova_apertura(tipo_negozio, data_rif)
+                                if not is_nuova:
+                                    valore_colli = float(colli or 0)
+                                    if valore_colli:
+                                        colli_validi_map[key] = colli_validi_map.get(key, 0.0) + valore_colli
                             
                             print(f"✅ Recuperati colli per {len(colli_map)} combinazioni")
                             
@@ -1136,9 +1344,15 @@ class DataViewer:
                                 if tipo_tim not in attivita_premi:
                                     continue
                                 
-                                # Se ci sono ore in TIM ma nessun dato di produzione locale
+                                # Se ci sono ore in TIM ma nessun dato di produzione locale o solo nuove aperture
                                 ore_tim = float(tim_data['durata'])
-                                if ore_tim > 0 and key not in colli_map:
+                                valid_colli = colli_validi_map.get(key, 0.0)
+                                zero_valid_colli = (
+                                    tipo_tim == "DOPPIA SPUNTA"
+                                    and key in colli_map
+                                    and valid_colli <= 0
+                                )
+                                if ore_tim > 0 and (key not in colli_map or zero_valid_colli):
                                     # Anomalia: ore registrate in TIM ma nessuna produzione locale
                                     nome = tim_data['nome'].strip()
                                     cognome = tim_data['cognome'].strip()
@@ -1152,7 +1366,8 @@ class DataViewer:
                                     else:
                                         nominativo = ""
                                     
-                                    ore_tim_decimal = ore_tim / 60.0  # Converti minuti in ore
+                                    # Salviamo MINUTI (non ore) nella tabella anomalie
+                                    ore_tim_minuti = ore_tim  # già in minuti
                                     
                                     # Converti data_str in datetime.date per data_rilevamento
                                     try:
@@ -1160,19 +1375,31 @@ class DataViewer:
                                     except ValueError:
                                         data_anomalia = today
                                     
+                                    if key not in colli_map:
+                                        dettaglio_descr = "nessuna produzione locale"
+                                    else:
+                                        dettaglio_descr = "solo colli da nuove aperture (produzione valida = 0)"
+
+                                    tipo_locale = reverse_tipo_mapping.get(tipo_tim, tipo_tim)
+
                                     insert_anomalia(
                                         tipo_anomalia="ORE_SENZA_PRODUZIONE",
                                         data_rilevamento=data_anomalia,
                                         codice_preparatore=codice_upper,
                                         nome_preparatore=nominativo or None,
-                                        tipo_attivita=tipo_tim,
-                                        ore_tim=ore_tim_decimal,
-                                        dettagli=f"Data: {data_str} - {ore_tim} minuti ({ore_tim_decimal:.2f} ore) in TIM ma nessuna produzione locale",
+                                        tipo_attivita=tipo_locale,
+                                        ore_tim=ore_tim_minuti,
+                                        dettagli=f"Data: {data_str} - {ore_tim} minuti ({ore_tim/60:.2f} ore) in TIM ma {dettaglio_descr}",
                                         note=None
                                     )
                                     anomalie_ore_count += 1
-                                    
-                                    print(f"  ⚠️ Anomalia: {codice_upper} ({tipo_tim}) - {ore_tim} min in TIM, 0 colli locali (data: {data_str})")
+                                    if key not in colli_map:
+                                        print(f"  ⚠️ Anomalia: {codice_upper} ({tipo_tim}) - {ore_tim} min in TIM, 0 colli locali (data: {data_str})")
+                                    else:
+                                        print(f"  ⚠️ Anomalia: {codice_upper} ({tipo_tim}) - {ore_tim} min in TIM, solo nuove aperture (data: {data_str})")
+                            
+                            # COMMIT per assicurare che le anomalie ORE_SENZA_PRODUZIONE siano visibili al NOT EXISTS
+                            app_conn.commit()
                             
                             # Ora calcola e prepara gli update
                             updates_batch = []
@@ -1201,14 +1428,23 @@ class DataViewer:
                                 # Calcola totale colli
                                 totale_colli_globale = sum(float(r[3] or 0) for r in records_list)
                                 
-                                # Proporziona per ogni negozio
-                                for codice_orig, tipo_att, tipo_negozio, colli in records_list:
-                                    if totale_colli_globale > 0:
-                                        ore_prop = round((durata_totale * float(colli or 0)) / totale_colli_globale / 60.0, 2)
-                                    else:
-                                        ore_prop = 0.0
-                                    
-                                    updates_batch.append((nominativo, ore_prop, codice_orig, tipo_att, data_str, tipo_negozio))
+                                # Proporziona in MINUTI INTERI con compensazione per somma esatta
+                                minuti_distribuiti = []
+                                if totale_colli_globale > 0:
+                                    for i, (codice_orig, tipo_att, tipo_negozio, colli) in enumerate(records_list):
+                                        if i < len(records_list) - 1:
+                                            # Arrotonda a minuti interi tutte le porzioni tranne l'ultima
+                                            minuti_prop = round((durata_totale * float(colli or 0)) / totale_colli_globale)
+                                        else:
+                                            # L'ultima porzione = totale - somma precedenti (compensazione per somma identica a TIM)
+                                            minuti_prop = round(durata_totale - sum(minuti_distribuiti))
+                                        
+                                        minuti_distribuiti.append(minuti_prop)
+                                        updates_batch.append((nominativo, float(minuti_prop), codice_orig, tipo_att, data_str, tipo_negozio))
+                                else:
+                                    # Nessun collo: 0 minuti per tutti
+                                    for codice_orig, tipo_att, tipo_negozio, colli in records_list:
+                                        updates_batch.append((nominativo, 0.0, codice_orig, tipo_att, data_str, tipo_negozio))
                                 
                                 if idx % 100 == 0:
                                     percent = int((idx + 1) / len(colli_map) * 100)
@@ -1235,6 +1471,8 @@ class DataViewer:
                             
                             # Query per raggruppare per data+codice+tipo_attivita e sommare ore
                             # ESCLUDE i record con ore_tim = 0 (che generano PRODUZIONE_SENZA_ORE)
+                            # ESCLUDE anche i giorni dove esiste già un'anomalia ORE_SENZA_PRODUZIONE
+                            # (ovvero giorni con solo nuove aperture)
                             check_query = """
                                 SELECT data, 
                                        codice_preparatore, 
@@ -1246,11 +1484,30 @@ class DataViewer:
                                 WHERE ore_tim IS NOT NULL
                                   AND ore_tim > 0
                                   AND ore_gestionale IS NOT NULL
+                                  AND NOT EXISTS (
+                                      SELECT 1 
+                                      FROM anomalie 
+                                      WHERE anomalie.tipo_anomalia = 'ORE_SENZA_PRODUZIONE'
+                                        AND anomalie.data_rilevamento = dati_produzione.data
+                                        AND LOWER(anomalie.codice_preparatore) = LOWER(dati_produzione.codice_preparatore)
+                                        AND anomalie.tipo_attivita = dati_produzione.tipo_attivita
+                                  )
+                            """
+
+                            check_clause, check_params = self._build_sync_filter_clause(
+                                sync_filters,
+                                alias="dati_produzione",
+                                use_where=False,
+                            )
+                            if check_clause:
+                                check_query += check_clause + "\n"
+
+                            check_query += """
                                 GROUP BY data, codice_preparatore, tipo_attivita
                                 HAVING ABS((ore_gestionale_totali - ore_tim_totali) * 60) >= 60
                             """
                             
-                            app_cursor.execute(check_query)
+                            app_cursor.execute(check_query, check_params)
                             records_con_diff = app_cursor.fetchall()
                             
                             print(f"  Trovati {len(records_con_diff)} giorni con differenza >= 60 min")
@@ -1264,9 +1521,12 @@ class DataViewer:
                                 ore_tim_totali = row['ore_tim_totali']
                                 ore_gestionale_totali = row['ore_gestionale_totali']
                                 
-                                # Recupera nome e cognome da durate_map (da TIM)
+                                # Recupera nome e cognome da durate_map (da TIM).
+                                # tipo_attivita nel DB usa l'underscore (es. DOPPIA_SPUNTA) mentre in TIM
+                                # è salvato con gli spazi, quindi riapplico lo stesso mapping usato in input.
                                 data_str = data.strftime('%Y-%m-%d') if hasattr(data, 'strftime') else str(data)
-                                durata_info = durate_map.get((codice.upper(), tipo_attivita, data_str))
+                                tipo_tim_lookup = tipo_mapping.get(tipo_attivita, tipo_attivita)
+                                durata_info = durate_map.get((codice.upper(), tipo_tim_lookup, data_str))
                                 
                                 nome_formattato = None
                                 if durata_info:
@@ -1279,10 +1539,10 @@ class DataViewer:
                                     elif nome_tim:
                                         nome_formattato = nome_tim.upper()
                                 
-                                # Converti Decimal in float
-                                ore_tim_val = float(ore_tim_totali) if ore_tim_totali is not None else 0.0
-                                ore_gestionale_val = float(ore_gestionale_totali) if ore_gestionale_totali is not None else 0.0
-                                differenza_minuti = (ore_gestionale_val - ore_tim_val) * 60
+                                # Converti Decimal in float - ORA SONO MINUTI (non ore)
+                                minuti_tim_val = float(ore_tim_totali) if ore_tim_totali is not None else 0.0
+                                minuti_gestionale_val = float(ore_gestionale_totali) if ore_gestionale_totali is not None else 0.0
+                                differenza_minuti = minuti_gestionale_val - minuti_tim_val
                                 differenza_assoluta = abs(differenza_minuti)
                                 
                                 if differenza_assoluta >= 120:
@@ -1294,11 +1554,11 @@ class DataViewer:
                                         codice_preparatore=codice,
                                         nome_preparatore=nome_formattato,
                                         tipo_attivita=tipo_attivita,
-                                        ore_tim=ore_tim_val,
-                                        dettagli=f"Data: {data_str} - Ore TIM: {ore_tim_val:.2f}h, Ore Gestionale: {ore_gestionale_val:.2f}h - Differenza: {differenza_minuti:+.0f} min - Tipi: {tipi}"
+                                        ore_tim=minuti_tim_val,
+                                        dettagli=f"Data: {data_str} - Minuti TIM: {minuti_tim_val:.2f} ({minuti_tim_val/60:.2f}h), Minuti Gestionale: {minuti_gestionale_val:.2f} ({minuti_gestionale_val/60:.2f}h) - Differenza: {differenza_minuti:+.0f} min - Tipi: {tipi}"
                                     )
                                     anomalie_x_xx_count += 1
-                                    print(f"  ⚠️ XX: {codice} ({nome_formattato}) {data_str} - {differenza_minuti:+.0f} min (TIM: {ore_tim_val:.2f}h, Gest: {ore_gestionale_val:.2f}h)")
+                                    print(f"  ⚠️ XX: {codice} ({nome_formattato}) {data_str} - {differenza_minuti:+.0f} min (TIM: {minuti_tim_val/60:.2f}h, Gest: {minuti_gestionale_val/60:.2f}h)")
                                 elif differenza_assoluta >= 60:
                                     # Anomalia X - differenza 60-120 min
                                     from database import insert_anomalia
@@ -1308,11 +1568,11 @@ class DataViewer:
                                         codice_preparatore=codice,
                                         nome_preparatore=nome_formattato,
                                         tipo_attivita=tipo_attivita,
-                                        ore_tim=ore_tim_val,
-                                        dettagli=f"Data: {data_str} - Ore TIM: {ore_tim_val:.2f}h, Ore Gestionale: {ore_gestionale_val:.2f}h - Differenza: {differenza_minuti:+.0f} min - Tipi: {tipi}"
+                                        ore_tim=minuti_tim_val,
+                                        dettagli=f"Data: {data_str} - Minuti TIM: {minuti_tim_val:.2f} ({minuti_tim_val/60:.2f}h), Minuti Gestionale: {minuti_gestionale_val:.2f} ({minuti_gestionale_val/60:.2f}h) - Differenza: {differenza_minuti:+.0f} min - Tipi: {tipi}"
                                     )
                                     anomalie_x_xx_count += 1
-                                    print(f"  ⚠️ X: {codice} ({nome_formattato}) {data_str} - {differenza_minuti:+.0f} min (TIM: {ore_tim_val:.2f}h, Gest: {ore_gestionale_val:.2f}h)")
+                                    print(f"  ⚠️ X: {codice} ({nome_formattato}) {data_str} - {differenza_minuti:+.0f} min (TIM: {minuti_tim_val/60:.2f}h, Gest: {minuti_gestionale_val/60:.2f}h)")
                             
                             print(f"✅ Anomalie X/XX generate: {anomalie_x_xx_count}")
                             
@@ -1323,15 +1583,30 @@ class DataViewer:
                                 SELECT data, 
                                        codice_preparatore, 
                                        tipo_attivita,
-                                       SUM(CAST(ore_gestionale AS DECIMAL(10,2))) as ore_gestionale_totali,
-                                       GROUP_CONCAT(DISTINCT tipo ORDER BY tipo SEPARATOR ', ') as tipi
+                                       SUM(CAST(ore_gestionale AS DECIMAL(10,2))) AS ore_gestionale_totali,
+                                       SUM(CASE WHEN tipo_attivita = 'DOPPIA_SPUNTA'
+                                                THEN totale_colli
+                                                ELSE CAST(ore_gestionale AS DECIMAL(10,2))
+                                           END) AS produzione_totale,
+                                       GROUP_CONCAT(DISTINCT tipo ORDER BY tipo SEPARATOR ', ') AS tipi
                                 FROM dati_produzione
-                                WHERE (ore_tim IS NULL OR ore_tim = 0)
-                                  AND ore_gestionale > 0
+                                WHERE COALESCE(ore_tim, 0) = 0
+                            """
+
+                            prod_clause, prod_params = self._build_sync_filter_clause(
+                                sync_filters,
+                                alias="dati_produzione",
+                                use_where=False,
+                            )
+                            if prod_clause:
+                                produzione_senza_ore_query += prod_clause + "\n"
+
+                            produzione_senza_ore_query += """
                                 GROUP BY data, codice_preparatore, tipo_attivita
+                                HAVING produzione_totale > 0
                             """
                             
-                            app_cursor.execute(produzione_senza_ore_query)
+                            app_cursor.execute(produzione_senza_ore_query, prod_params)
                             records_senza_tim = app_cursor.fetchall()
                             
                             print(f"  Trovati {len(records_senza_tim)} giorni con produzione senza ore TIM")
@@ -1343,28 +1618,39 @@ class DataViewer:
                                 tipo_attivita = row['tipo_attivita']
                                 tipi = row['tipi']
                                 ore_gestionale_totali = row['ore_gestionale_totali']
+                                produzione_totale = row['produzione_totale']
                                 
-                                # Recupera nome da durate_map (da TIM)
+                                # Recupera nome da durate_map (da TIM) usando lo stesso mapping attività.
                                 data_str = data.strftime('%Y-%m-%d') if hasattr(data, 'strftime') else str(data)
-                                durata_info = durate_map.get((codice.upper(), tipo_attivita, data_str))
+                                tipo_tim_lookup = tipo_mapping.get(tipo_attivita, tipo_attivita)
+                                durata_info = durate_map.get((codice.upper(), tipo_tim_lookup, data_str))
                                 
-                                # SALTA se il codice non è in TIM (già generato CODICE_NON_ABBINATO)
-                                if not durata_info:
-                                    print(f"  ⏭️ SKIP: {codice} {data_str} - già gestito da CODICE_NON_ABBINATO")
+                                # SALTA SOLO se il codice non è presente in TIM quel giorno (in nessuna attività).
+                                # Se manca la durata per quella specifica attività, generiamo comunque l'anomalia
+                                # (es. per CARRELLISTI) evitando di perdere segnalazioni.
+                                if not durata_info and (codice.upper(), data_str) not in tim_presenza_giorno:
+                                    print(f"  ⏭️ SKIP: {codice} {data_str} - codice non presente in TIM")
                                     continue
                                 
                                 nome_formattato = None
-                                nome_tim = durata_info.get("nome", "").strip()
-                                cognome_tim = durata_info.get("cognome", "").strip()
-                                if cognome_tim and nome_tim:
-                                    nome_formattato = f"{cognome_tim.upper()} {nome_tim.upper()}"
-                                elif cognome_tim:
-                                    nome_formattato = cognome_tim.upper()
-                                elif nome_tim:
-                                    nome_formattato = nome_tim.upper()
+                                if durata_info:
+                                    nome_tim = durata_info.get("nome", "").strip()
+                                    cognome_tim = durata_info.get("cognome", "").strip()
+                                    if cognome_tim and nome_tim:
+                                        nome_formattato = f"{cognome_tim.upper()} {nome_tim.upper()}"
+                                    elif cognome_tim:
+                                        nome_formattato = cognome_tim.upper()
+                                    elif nome_tim:
+                                        nome_formattato = nome_tim.upper()
                                 
-                                # Converti Decimal in float
+                                # Converti i valori per generare messaggio coerente.
                                 ore_gestionale_val = float(ore_gestionale_totali) if ore_gestionale_totali is not None else 0.0
+                                produzione_val = float(produzione_totale) if produzione_totale is not None else 0.0
+
+                                if tipo_attivita == 'DOPPIA_SPUNTA':
+                                    produzione_descr = f"Colli: {int(produzione_val)}"
+                                else:
+                                    produzione_descr = f"Ore Gestionale: {ore_gestionale_val:.2f}h"
                                 
                                 from database import insert_anomalia
                                 insert_anomalia(
@@ -1374,7 +1660,7 @@ class DataViewer:
                                     nome_preparatore=nome_formattato,
                                     tipo_attivita=tipo_attivita,
                                     ore_tim=0.0,
-                                    dettagli=f"Data: {data_str} - Ore TIM: 0.00h, Ore Gestionale: {ore_gestionale_val:.2f}h - Tipi: {tipi}"
+                                    dettagli=f"Data: {data_str} - Ore TIM: 0.00h, {produzione_descr} - Tipi: {tipi}"
                                 )
                                 anomalie_senza_ore_count += 1
                                 print(f"  ⚠️ PRODUZIONE_SENZA_ORE: {codice} ({nome_formattato}) {data_str} - Gest: {ore_gestionale_val:.2f}h - Tipi: {tipi}")

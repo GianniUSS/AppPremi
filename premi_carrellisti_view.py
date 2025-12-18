@@ -3,10 +3,11 @@ Interfaccia per il calcolo dei premi carrellisti.
 """
 import datetime
 from decimal import Decimal
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import filedialog, messagebox, ttk
 
 from config import COLORS, FONTS
 from database import (
@@ -47,6 +48,7 @@ class PremiCarrellistiView(tk.Frame):
         self.anno_var = tk.StringVar(value=str(today.year))
         self.mese_var = tk.StringVar(value=MONTH_CHOICES[today.month - 1][0])
         self.codice_var = tk.StringVar()
+        self._current_premi: List[Dict[str, Any]] = []
 
         self._build_ui()
         # Carica automaticamente i premi del mese corrente
@@ -145,6 +147,14 @@ class PremiCarrellistiView(tk.Frame):
             width=16,
         ).grid(row=0, column=7, padx=(6, 12), pady=10)
 
+        create_button(
+            filter_frame,
+            text="📤 Export Excel",
+            command=self._export_premi_excel,
+            variant="secondary",
+            width=16,
+        ).grid(row=0, column=8, padx=(6, 12), pady=10)
+
         # Configura espansione colonne
         for col in [1, 3, 5]:
             filter_frame.grid_columnconfigure(col, weight=1)
@@ -195,6 +205,8 @@ class PremiCarrellistiView(tk.Frame):
             "premio_totale": "Premio Totale (€)",
         }
 
+        self._tree_headers = headers
+
         for col, title in headers.items():
             self.tree.heading(col, text=title)
 
@@ -226,6 +238,126 @@ class PremiCarrellistiView(tk.Frame):
         )
         self.stats_label.pack(side="left", padx=12, pady=10)
 
+    def _export_premi_excel(self) -> None:
+        """Esporta i premi mostrati nella tabella in formato Excel."""
+        premi_src = self._current_premi.copy() if self._current_premi else []
+        if not premi_src and not self.tree.get_children():
+            messagebox.showinfo(
+                "Nessun dato",
+                "Non ci sono premi da esportare. Usa 'Aggiorna' o 'Calcola Premi'.",
+                parent=self,
+            )
+            return
+
+        anno = self.anno_var.get().strip() or "XXXX"
+        mese = (self.mese_var.get().strip() or "Mese").replace(" ", "_")
+        default_name = f"Premi_Carrellisti_{anno}_{mese}.xlsx"
+
+        file_path = filedialog.asksaveasfilename(
+            title="Esporta premi in Excel",
+            defaultextension=".xlsx",
+            filetypes=[("File Excel", "*.xlsx"), ("Tutti i file", "*.*")],
+            initialdir=str(Path.home()),
+            initialfile=default_name,
+        )
+
+        if not file_path:
+            return
+
+        try:
+            import pandas as pd
+
+            cent_cols = {
+                "Ore",
+                "Mov/h",
+                "Premio Base (€)",
+                "Premio KPI (€)",
+                "Premio Totale (€)",
+            }
+            int_cols = {"Tot. Movimenti"}
+
+            if premi_src:
+                export_rows: List[Dict[str, Any]] = []
+                for premio in premi_src:
+                    export_rows.append(
+                        {
+                            "Codice": (premio.get("codice_preparatore") or ""),
+                            "Nome": (premio.get("nome_preparatore") or ""),
+                            "Tot. Movimenti": int(float(premio.get("totale_movimenti") or 0)),
+                            "Ore": float(premio.get("ore_lavorate") or 0),
+                            "Mov/h": float(premio.get("movimenti_ora") or 0),
+                            "Fascia": (premio.get("fascia_raggiunta") or "N/A"),
+                            "Premio Base (€)": float(premio.get("premio_base") or 0),
+                            "Premio KPI (€)": float(premio.get("premio_kpi") or 0),
+                            "Premio Totale (€)": float(premio.get("premio_totale") or 0),
+                        }
+                    )
+                df = pd.DataFrame(export_rows)
+            else:
+                rows = self._collect_tree_rows()
+                df = pd.DataFrame(rows)
+
+            with pd.ExcelWriter(file_path, engine="openpyxl") as writer:
+                df.to_excel(writer, index=False, sheet_name="Premi")
+                ws = writer.sheets["Premi"]
+
+                headers = [cell.value for cell in ws[1]]
+                col_index: Dict[str, int] = {
+                    str(h): i + 1 for i, h in enumerate(headers) if h is not None
+                }
+
+                for col_name, idx in col_index.items():
+                    if col_name in int_cols:
+                        fmt = "0"
+                    elif col_name in cent_cols:
+                        fmt = "#,##0.00"
+                    else:
+                        continue
+
+                    for row_idx in range(2, ws.max_row + 1):
+                        cell = ws.cell(row=row_idx, column=idx)
+                        if isinstance(cell.value, (int, float)) and cell.value is not None:
+                            cell.number_format = fmt
+
+                from openpyxl.utils import get_column_letter
+
+                for col in range(1, ws.max_column + 1):
+                    letter = get_column_letter(col)
+                    max_len = 0
+                    for row_idx in range(1, ws.max_row + 1):
+                        value = ws.cell(row=row_idx, column=col).value
+                        if value is None:
+                            continue
+                        max_len = max(max_len, len(str(value)))
+                    ws.column_dimensions[letter].width = min(max_len + 2, 60)
+            messagebox.showinfo(
+                "Export completato",
+                f"File salvato in:\n{file_path}",
+                parent=self,
+            )
+        except Exception as exc:
+            messagebox.showerror(
+                "Errore",
+                f"Esportazione non riuscita:\n{exc}",
+                parent=self,
+            )
+
+    def _collect_tree_rows(self) -> List[Dict[str, str]]:
+        """Raccoglie i dati visibili nella treeview."""
+        columns = list(self.tree["columns"])
+        headers = [self._tree_headers.get(col, col) for col in columns]
+        data: List[Dict[str, str]] = []
+
+        for item_id in self.tree.get_children():
+            values = self.tree.item(item_id, "values")
+            row = {
+                headers[idx]: values[idx] if idx < len(values) else ""
+                for idx in range(len(columns))
+            }
+            data.append(row)
+
+        return data
+
     def _carica_premi(self):
         """Carica e visualizza i premi salvati nel database."""
         anno_str = self.anno_var.get().strip()
@@ -244,6 +376,7 @@ class PremiCarrellistiView(tk.Frame):
         try:
             # Recupera premi dal database
             premi = fetch_premi_carrellisti(anno, mese, codice_filtro)
+            self._current_premi = premi.copy()
             
             # Pulisci tabella
             for item in self.tree.get_children():
@@ -456,10 +589,11 @@ class PremiCarrellistiView(tk.Frame):
                 AND MONTH(dp.data) = %s
                 AND NOT EXISTS (
                     SELECT 1 FROM anomalie a
-                    WHERE a.tipo_anomalia = 'PRODUZIONE_SENZA_ORE'
+                    WHERE a.tipo_anomalia IN ('PRODUZIONE_SENZA_ORE', 'ORE_SENZA_PRODUZIONE')
                         AND a.data_rilevamento = dp.data
                         AND a.codice_preparatore = dp.codice_preparatore
                         AND a.tipo_attivita = dp.tipo_attivita
+                        AND COALESCE(a.stato, 'APERTA') NOT IN ('RISOLTA', 'VERIFICATA')
                 )
         """
         params: List[Any] = [anno, mese]
@@ -482,7 +616,10 @@ class PremiCarrellistiView(tk.Frame):
                     nome = str(row.get("nome_preparatore") or "")
                     tipo = str(row.get("tipo") or "").upper()
                     colli = int(row.get("colli") or 0)
-                    ore = float(row.get("ore_totali") or 0)
+                    # ⚠️ IMPORTANTE: ore_totali è in MINUTI nel DB
+                    minuti_totali = Decimal(str(row.get("ore_totali") or 0))
+                    # Converti minuti → ore
+                    ore = minuti_totali / Decimal("60")
 
                     # Applica peso
                     peso = pesi_map.get(tipo, Decimal("1.0"))
@@ -498,7 +635,7 @@ class PremiCarrellistiView(tk.Frame):
                         }
 
                     risultati_utente[key]["movimenti_totali"] += movimenti_pesati
-                    risultati_utente[key]["ore_totali"] += Decimal(str(ore))
+                    risultati_utente[key]["ore_totali"] += ore
 
         # Calcola premi per ogni utente
         risultati_finali = []

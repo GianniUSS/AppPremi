@@ -82,3 +82,6 @@ python main.py
 - **Inserimenti batch**: Performance migliorate
 - **Type hints**: Codice più documentato e manutenibile
 - **Gestione errori**: Robustezza migliorata
+
+## TODO
+- Estrazioni premi in excel per tipo attivita

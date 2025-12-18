@@ -45,6 +45,7 @@ def _read_excel_with_fallbacks(file_path: str, header_candidates: List[int]) -> 
     for header_row in header_candidates:
         try:
             df = pd.read_excel(file_path, engine="openpyxl", header=header_row)
+            df.attrs["source_header_row"] = header_row
             if not df.empty and len(df.columns) > 3:
                 logger.debug(
                     "File letto con header=%s, righe=%d, colonne=%s",
@@ -59,6 +60,7 @@ def _read_excel_with_fallbacks(file_path: str, header_candidates: List[int]) -> 
 
     try:
         df = pd.read_excel(file_path, header=header_candidates[0])
+        df.attrs["source_header_row"] = header_candidates[0]
         if not df.empty:
             logger.debug(
                 "File letto con engine automatico, righe=%d, colonne=%s",
@@ -140,6 +142,7 @@ def parse_preparatori(file_path: str) -> pd.DataFrame:
         # Ultimo tentativo senza specificare engine
         try:
             df = pd.read_excel(file_path, header=0)
+            df.attrs["source_header_row"] = 0
             logger.debug(
                 "File letto con engine automatico, righe=%d, colonne=%s",
                 len(df),
@@ -283,15 +286,21 @@ def parse_preparatori(file_path: str) -> pd.DataFrame:
     sub["codice_preparatore"] = sub["codice_preparatore"].astype(str).str.strip()
     sub["nome_preparatore"] = sub["nome_preparatore"].astype(str).str.strip()
     sub["totale_colli"] = pd.to_numeric(sub["totale_colli"], errors="coerce").fillna(0).astype(int)
-    sub["ore_gestionale"] = sub["tempo_lavorato_raw"].apply(_parse_tempo_lavorato).astype(float)
+    # Converti ore in MINUTI moltiplicando per 60
+    sub["ore_gestionale"] = (sub["tempo_lavorato_raw"].apply(_parse_tempo_lavorato) * 60).astype(float)
     sub.drop(columns=["tempo_lavorato_raw"], inplace=True)
 
     out = (
         sub.groupby(["data", "codice_preparatore", "nome_preparatore"], as_index=False)
         .agg({"totale_colli": "sum", "ore_gestionale": "sum"})
-        .assign(penalita=0, tipo_attivita="PICKING", tipo="")
+        .assign(
+            penalita_eccesso=0,
+            penalita_difetto=0,
+            tipo_attivita="PICKING",
+            tipo="",
+        )
     )
-    out["ore_gestionale"] = out["ore_gestionale"].round(2)
+    out["ore_gestionale"] = out["ore_gestionale"].round(2)  # MINUTI con 2 decimali
     return out
 
 
@@ -791,8 +800,8 @@ def parse_carrelisti(file_path: str, data_rif: datetime.date) -> pd.DataFrame:
         ore_gestionale_per_tipo = {}
         for tipo, movimenti in movimenti_per_tipo.items():
             proporzione = movimenti / totale_movimenti
-            ore_gestionale = tempo_totale_giornata_ore * proporzione
-            ore_gestionale_per_tipo[tipo] = ore_gestionale
+            minuti_gestionale = tempo_totale_giornata_ore * 60 * proporzione  # Converti ore in MINUTI
+            ore_gestionale_per_tipo[tipo] = minuti_gestionale
             
             # Crea note_errori se ci sono errori per questo tipo
             note_errori = None
@@ -805,11 +814,12 @@ def parse_carrelisti(file_path: str, data_rif: datetime.date) -> pd.DataFrame:
                 "codice_preparatore": codice,
                 "nome_preparatore": "",
                 "totale_colli": movimenti,
-                "penalita": 0,
+                "penalita_eccesso": 0,
+                "penalita_difetto": 0,
                 "tipo_attivita": "CARRELLISTI",
                 "tipo": tipo,
                 "ore_tim": 0.0,
-                "ore_gestionale": round(ore_gestionale, 2),
+                "ore_gestionale": round(minuti_gestionale, 2),  # SALVA MINUTI
                 "note_errori": note_errori,
             })
         
@@ -930,14 +940,16 @@ def parse_carrelisti(file_path: str, data_rif: datetime.date) -> pd.DataFrame:
         as_index=False
     ).agg({
         "totale_colli": "sum",
-        "penalita": "first",
+        "penalita_eccesso": "sum",
+        "penalita_difetto": "sum",
         "ore_tim": "sum",
         "ore_gestionale": "sum"
     })
     
-    # Assicura che totale_colli sia int e penalita sia int
+    # Assicura che totale_colli sia int e inizializza penalità separate
     out["totale_colli"] = out["totale_colli"].astype(int)
-    out["penalita"] = out["penalita"].astype(int)
+    out["penalita_eccesso"] = out["penalita_eccesso"].astype(int)
+    out["penalita_difetto"] = out["penalita_difetto"].astype(int)
     
     # Debug: mostra i primi record
     return out
@@ -989,7 +1001,8 @@ def _parse_carrellisti_old_logic(
                 "codice_preparatore": current_code,
                 "nome_preparatore": "",
                 "totale_colli": colli,
-                "penalita": 0,
+                "penalita_eccesso": 0,
+                "penalita_difetto": 0,
                 "tipo_attivita": "CARRELLISTI",
                 "tipo": tipo,
                 "ore_tim": 0.0,
@@ -1010,13 +1023,15 @@ def _parse_carrellisti_old_logic(
         ["data", "codice_preparatore", "nome_preparatore", "tipo", "tipo_attivita"],
         as_index=False
     )["totale_colli"].sum()
-    out["penalita"] = 0
+    out["penalita_eccesso"] = 0
+    out["penalita_difetto"] = 0
     out["ore_tim"] = 0.0
     out["ore_gestionale"] = 0.0
     
     # Assicura che totale_colli e penalita siano int
     out["totale_colli"] = out["totale_colli"].astype(int)
-    out["penalita"] = out["penalita"].astype(int)
+    out["penalita_eccesso"] = out["penalita_eccesso"].astype(int)
+    out["penalita_difetto"] = out["penalita_difetto"].astype(int)
     
     return out
 
@@ -1036,6 +1051,7 @@ def parse_doppia_spunta(file_path: str) -> DoppiaSpuntaResult:
     """Parsa il report Doppia Spunta restituendo dati per DB e penalità PICKING."""
     df = _read_excel_with_fallbacks(file_path, [1, 0, 2, 3])
     df = df.rename(columns=lambda x: str(x).strip())
+    header_row = int(df.attrs.get("source_header_row", 0))  # riga intestazione usata in pandas (0-based)
 
     logger.debug("Colonne disponibili Doppia Spunta: %s", list(df.columns))
 
@@ -1076,28 +1092,112 @@ def parse_doppia_spunta(file_path: str) -> DoppiaSpuntaResult:
         col_tipo = "_tipo_temp"
     else:
         logger.debug("Colonna tipo trovata: %s", col_tipo)
+    
+    # Codice prodotto e lotto
+    col_codpro = find_column(df, [["codpro"], ["cod", "prod"], ["prodotto"]], required=False)
+    col_lotto = find_column(df, [["lotto"]], required=False)
+    
+    if col_codpro:
+        logger.debug("Colonna codpro trovata: %s", col_codpro)
+    else:
+        logger.debug("Colonna codpro non trovata")
+    
+    if col_lotto:
+        logger.debug("Colonna lotto trovata: %s", col_lotto)
+    else:
+        logger.debug("Colonna lotto non trovata")
 
-    # Penalità (differenze o colonne con 'penal')
+    # Penalità: cerchiamo diff/uvc e ECCESSO/DIFETTO
+    col_diff_uvc = None
+    col_eccesso_difetto = None
+    
     try:
-        col_penalita = find_column(df, [["diffe"], ["penal"], ["differenze"]])
-        logger.debug("Colonna penalità trovata: %s", col_penalita)
+        # Cerca esattamente "diff/uvc" come unica colonna
+        col_diff_uvc = find_column(df, [["diff/uvc"], ["diff", "/", "uvc"]], required=False)
+        if col_diff_uvc:
+            norm = normalize_string(col_diff_uvc)
+            if "diff" in norm and "uvc" in norm:
+                logger.debug("Colonna diff/uvc trovata: %s", col_diff_uvc)
+            else:
+                logger.debug(
+                    "Match parziale su %s per diff/uvc (norm=%s), ignoro e uso fallback",
+                    col_diff_uvc,
+                    norm,
+                )
+                col_diff_uvc = None
+    except ValueError:
+        pass
+    
+    try:
+        # Cerca esattamente "ECCESSO/DIFETTO"
+        col_eccesso_difetto = find_column(df, [["eccesso/difetto"], ["eccesso", "/", "difetto"]], required=False)
+        if col_eccesso_difetto:
+            norm = normalize_string(col_eccesso_difetto)
+            if "eccesso" in norm or "difetto" in norm:
+                logger.debug("Colonna ECCESSO/DIFETTO trovata: %s", col_eccesso_difetto)
+            else:
+                logger.debug(
+                    "Match parziale su %s per ECCESSO/DIFETTO (norm=%s), ignoro",
+                    col_eccesso_difetto,
+                    norm,
+                )
+                col_eccesso_difetto = None
+    except ValueError:
+        pass
+    
+    # Cerca sempre la colonna differenze (diffe) per il calcolo penalità
+    col_penalita = None
+    try:
+        col_penalita = find_column(df, [["diffe"], ["penal"], ["differenze"]], required=False)
+        if col_penalita:
+            logger.debug("Colonna differenze (diffe) trovata: %s", col_penalita)
     except ValueError:
         logger.debug("Colonna penalità non trovata, uso valore 0")
         col_penalita = None
 
-    # Quantità da sommare (preferiamo UVC, altrimenti qtaspunta, righe)
-    col_quantita: Optional[str] = None
-    for candidate in (["uvc"], ["qta", "spunta"], ["qtaspunta"], ["righe"], ["quantita"]):
-        try:
-            col_quantita = find_column(df, [candidate], required=False)
-        except ValueError:
-            col_quantita = None
-        if col_quantita:
-            logger.debug("Colonna quantità trovata: %s", col_quantita)
-            break
+    # Quantità: qtasped (colonna M) e uvc (colonna N)
+    # n_colli = qtasped / uvc (arrotondato per eccesso, 0/0 = 0)
+    col_qtasped: Optional[str] = None
+    col_uvc: Optional[str] = None
     
-    if not col_quantita:
-        logger.debug("Nessuna colonna quantità trovata, uso valore 0")
+    try:
+        col_qtasped = find_column(df, [["qta", "sped"], ["qtasped"]], required=False)
+        if col_qtasped:
+            logger.debug("Colonna qtasped trovata: %s (posizione: %d)", col_qtasped, df.columns.get_loc(col_qtasped))
+    except ValueError:
+        col_qtasped = None
+    
+    try:
+        col_uvc = find_column(df, [["uvc"]], required=False)
+        if col_uvc:
+            logger.debug("Colonna uvc trovata: %s (posizione: %d)", col_uvc, df.columns.get_loc(col_uvc))
+    except ValueError:
+        col_uvc = None
+    
+    # DEBUG opzionale: elenco colonne
+    logger.debug("Colonne Excel indicizzate: %s", [f"[{idx}] {col}" for idx, col in enumerate(df.columns)])
+    
+    if not col_qtasped:
+        logger.warning("Colonna qtasped non trovata, uso valore 0")
+    if not col_uvc:
+        logger.warning("Colonna uvc non trovata, uso valore 0")
+    
+    # DEBUG: Mostra i primi valori per verificare l'ordine
+    if col_qtasped and col_uvc:
+        logger.debug("VERIFICA COLONNE - Prime 3 righe:")
+        for i in range(min(3, len(df))):
+            logger.debug(f"  Riga {i}: qtasped={df[col_qtasped].iloc[i]}, uvc={df[col_uvc].iloc[i]}")
+        
+        # Verifica se le colonne sono invertite controllando la posizione
+        qtasped_idx = df.columns.get_loc(col_qtasped)
+        uvc_idx = df.columns.get_loc(col_uvc)
+        logger.debug(f"Posizione colonne: qtasped={qtasped_idx} (dovrebbe essere colonna M), uvc={uvc_idx} (dovrebbe essere colonna N)")
+        
+        # Se qtasped è DOPO uvc, sono invertite!
+        if qtasped_idx > uvc_idx:
+            logger.warning("ATTENZIONE: Le colonne qtasped e uvc sembrano invertite! Scambio...")
+            col_qtasped, col_uvc = col_uvc, col_qtasped
+            logger.debug(f"Dopo scambio: qtasped={col_qtasped}, uvc={col_uvc}")
 
     subset_cols = {
         "data": col_data,
@@ -1105,13 +1205,79 @@ def parse_doppia_spunta(file_path: str) -> DoppiaSpuntaResult:
         "tipo": col_tipo,
         "codice_picking": col_codice_picking,
     }
+    if col_diff_uvc:
+        subset_cols["diff_uvc"] = col_diff_uvc
+    if col_eccesso_difetto:
+        subset_cols["eccesso_difetto"] = col_eccesso_difetto
     if col_penalita:
         subset_cols["penalita"] = col_penalita
-    if col_quantita:
-        subset_cols["quantita"] = col_quantita
+    if col_qtasped:
+        subset_cols["qtasped"] = col_qtasped
+    if col_uvc:
+        subset_cols["uvc"] = col_uvc
+    if col_codpro:
+        subset_cols["codpro"] = col_codpro
+    if col_lotto:
+        subset_cols["lotto"] = col_lotto
 
-    sub = df[list(subset_cols.values())].copy()
-    sub.columns = list(subset_cols.keys())
+    # CRITICO: Prima di fare il subset, salviamo gli indici originali di df
+    # Creiamo una colonna temporanea in df con l'indice originale
+    df_with_idx = df.copy()
+    df_with_idx['_temp_original_row'] = df_with_idx.index
+
+    sub = df_with_idx[list(subset_cols.values()) + ['_temp_original_row']].copy()
+    # Rinomina colonne selezionate
+    col_rename = {v: k for k, v in subset_cols.items()}
+    col_rename['_temp_original_row'] = '_original_excel_row'
+    sub.rename(columns=col_rename, inplace=True)
+    
+    def _ensure_series(frame: pd.DataFrame, column_name: str) -> Optional[pd.Series]:
+        """Restituisce una Series anche se esistono colonne duplicate."""
+        if column_name not in frame.columns:
+            return None
+        col = frame[column_name]
+        if isinstance(col, pd.DataFrame):
+            return col.iloc[:, 0]
+        return col
+
+    # Ora salviamo i valori originali usando gli indici originali memorizzati
+    # Quando copiamo insieme alle colonne, l'allineamento è già garantito
+    uvc_series = _ensure_series(sub, 'uvc')
+    if uvc_series is not None:
+        sub['_uvc_original'] = uvc_series.copy()
+
+    qtasped_series = _ensure_series(sub, 'qtasped')
+    if qtasped_series is not None:
+        sub['_qtasped_original'] = qtasped_series.copy()
+    
+    # Salva valori originali della colonna diffe PRIMA di qualsiasi conversione
+    penalita_series = _ensure_series(sub, 'penalita')
+    diff_uvc_series_orig = _ensure_series(sub, 'diff_uvc')
+    if penalita_series is not None:
+        # Mantieni i valori ESATTAMENTE come sono nel file, senza conversioni
+        sub['_diffe_original'] = penalita_series
+        logger.debug(f"Salvati {len(sub)} valori diffe originali da colonna 'penalita' (primi 3 non-null: {penalita_series.dropna().head(3).tolist()})")
+    elif diff_uvc_series_orig is not None:
+        sub['_diffe_original'] = diff_uvc_series_orig
+        logger.debug(f"Salvati {len(sub)} valori diffe originali da colonna 'diff_uvc'")
+    else:
+        sub['_diffe_original'] = 0
+        logger.debug("Nessuna colonna diffe trovata, uso 0")
+
+    # Log diagnostico per DT7 2025-08-18 nelle prime 5 righe rilevate
+    debug_mask = (
+        sub['codice_preparatore'].astype(str).str.upper() == 'DT7'
+    ) & (sub['data'].astype(str) == '2025-08-18')
+    if debug_mask.any():
+        sample = sub[debug_mask].head(5)
+        for ridx, r in sample.iterrows():
+            logger.debug(
+                "[DT7 TRACE] idx=%s qtasped=%s uvc=%s tipo=%s",
+                ridx,
+                r.get('_qtasped_original'),
+                r.get('_uvc_original'),
+                r.get('tipo'),
+            )
 
     # Normalizzazione data
     sdate = sub["data"].astype(str).str.strip()
@@ -1123,49 +1289,124 @@ def parse_doppia_spunta(file_path: str) -> DoppiaSpuntaResult:
     sub.loc[sub["tipo"].str.lower() == "nan", "tipo"] = ""
     sub["nome_preparatore"] = ""
 
-    # Normalizzazione codice PICKING (colonna Q)
-    sub["codice_picking"] = (
-        sub["codice_picking"].astype(str).str.strip().str.split("-").str[0].str.upper()
-    )
+    # Mantiene il valore originale della colonna Prep come "altro codice"
+    raw_prep = sub["codice_picking"].astype(str).str.strip().str.upper()
+    raw_prep = raw_prep.where(raw_prep.str.lower() != "nan", "")
+    sub["altro_codice"] = raw_prep
 
-    if "quantita" in sub.columns:
-        uvc_val = pd.to_numeric(sub["quantita"], errors="coerce").fillna(0).abs()
+    # Normalizzazione codice PICKING (colonna Q)
+    # Regola richiesta: considera SOLO il primo codice (sinistra del trattino).
+    parts = raw_prep.str.split("-")
+    sub["codice_picking"] = parts.str[0].str.strip().str.upper()
+
+    # Calcola n_colli = qtasped / uvc (arrotondato per eccesso)
+    # Caso 0/0 = 0
+    if qtasped_series is not None and uvc_series is not None:
+        qtasped_val = pd.to_numeric(qtasped_series, errors="coerce").fillna(0)
+        uvc_val = pd.to_numeric(uvc_series, errors="coerce").fillna(0)
+        
+        # Calcola il rapporto gestendo divisione per zero
+        colli_val = pd.Series(0, index=sub.index, dtype=float)
+        for idx in sub.index:
+            sped = qtasped_val.loc[idx]
+            uvc = uvc_val.loc[idx]
+            
+            if sped == 0 and uvc == 0:
+                # 0/0 = 0
+                colli_val.loc[idx] = 0
+            elif uvc == 0:
+                # x/0 = 0 (per evitare divisione per zero)
+                colli_val.loc[idx] = 0
+            else:
+                # Calcola rapporto e arrotonda per eccesso
+                rapporto = sped / uvc
+                colli_val.loc[idx] = np.ceil(rapporto)
+    elif qtasped_series is not None:
+        colli_val = pd.to_numeric(qtasped_series, errors="coerce").fillna(0)
+        colli_val = np.ceil(colli_val)
+    elif uvc_series is not None:
+        # Se abbiamo solo uvc, usiamo il valore arrotondato per eccesso
+        colli_val = pd.to_numeric(uvc_series, errors="coerce").fillna(0)
+        colli_val = np.ceil(colli_val)
+    else:
+        colli_val = pd.Series(0, index=sub.index, dtype=float)
+
+    # Calcola penalità usando diff/uvc ed ECCESSO/DIFETTO
+    diff_uvc_series = _ensure_series(sub, "diff_uvc")
+    eccesso_difetto_series = _ensure_series(sub, "eccesso_difetto")
+    penalita_series = _ensure_series(sub, "penalita")
+
+    # Usa i valori originali salvati per diff
+    if '_diffe_original' in sub.columns:
+        sub["diff_original"] = pd.to_numeric(sub['_diffe_original'], errors="coerce").fillna(0)
+    else:
+        sub["diff_original"] = 0
+
+    # Penalità (errori) per preparatori: regola richiesta
+    # Se diff è 0 -> penalità 0, altrimenti abs(diff / uvc) se uvc>0, altrimenti abs(diff)
+    penalita_raw = pd.Series(0, index=sub.index, dtype=float)
+    diff_val = sub["diff_original"].copy()
+    
+    if uvc_series is not None:
+        uvc_val = pd.to_numeric(uvc_series, errors="coerce").fillna(0)
     else:
         uvc_val = pd.Series(0, index=sub.index, dtype=float)
 
-    if "penalita" in sub.columns:
-        penalita_raw = pd.to_numeric(sub["penalita"], errors="coerce").fillna(0).abs()
-    else:
-        penalita_raw = pd.Series(0, index=sub.index, dtype=float)
+    # Per ogni riga: se diff=0 -> penalità=0, altrimenti calcola abs(diff/uvc) o abs(diff)
+    for idx in sub.index:
+        d = diff_val.loc[idx]
+        if d == 0:
+            penalita_raw.loc[idx] = 0
+        else:
+            u = uvc_val.loc[idx]
+            if u > 0:
+                penalita_raw.loc[idx] = abs(d / u)
+            else:
+                penalita_raw.loc[idx] = abs(d)
+    
+    logger.debug("Calcolo penalità: se diff=0 -> 0, altrimenti abs(diff/uvc) con fallback abs(diff) quando uvc=0")
 
-    sub["totale_colli"] = uvc_val.astype(int)
+    sub["totale_colli"] = colli_val.astype(int)
 
-    # Calcola l'errore come |diffe| / UVC; se UVC è 0 manteniamo l'errore grezzo
-    penalita_ratio = penalita_raw.div(uvc_val.replace(0, np.nan)).fillna(penalita_raw)
-    sub["penalita"] = penalita_ratio.astype(float)
+    # Penalità: separa eccesso/difetto mantenendo valori positivi; conserva anche il valore assoluto grezzo
+    penalita_int = penalita_raw.round().astype(int)
+    sub["penalita_eccesso"] = penalita_int.clip(lower=0).astype(int)
+    sub["penalita_difetto"] = (-penalita_int.clip(upper=0)).astype(int)
+    sub["penalita_abs"] = penalita_raw.astype(float)
 
+    # Elimina righe senza chiavi minime
     sub = sub.dropna(subset=["data", "codice_preparatore", "codice_picking"])
+    sub = sub[sub["codice_picking"].astype(str).str.strip() != ""]
     
     logger.debug("Righe valide dopo pulizia: %d", len(sub))
 
-    # Creo DataFrame per penalità PICKING
+    # Creo DataFrame per penalità PICKING - usa penalita_abs (float) invece di int
     penalita_picking = (
-        sub.groupby(["data", "codice_picking"], as_index=False)["penalita"]
-        .sum()
+        sub.groupby(["data", "codice_picking"], as_index=False)[["penalita_abs"]].sum()
     )
-    penalita_picking = penalita_picking.rename(columns={"codice_picking": "codice_preparatore"})
-    penalita_picking["penalita"] = np.ceil(penalita_picking["penalita"]).astype(int)
+    penalita_picking = penalita_picking.rename(
+        columns={"codice_picking": "codice_preparatore", "penalita_abs": "penalita_totale"}
+    )
+    # Arrotonda a 2 decimali per coerenza
+    penalita_picking["penalita_totale"] = penalita_picking["penalita_totale"].round(2)
 
+    # Raggruppa per preparatori Doppia Spunta - usa penalita_abs (float) invece di int
     grouped = (
         sub.drop(columns=["codice_picking"])
         .groupby(["data", "codice_preparatore", "nome_preparatore", "tipo"], as_index=False)[
-            ["totale_colli", "penalita"]
+            ["totale_colli", "penalita_abs"]
         ]
         .sum()
         .assign(tipo_attivita="DOPPIA_SPUNTA")
     )
     grouped["totale_colli"] = grouped["totale_colli"].astype(int)
-    grouped["penalita"] = np.ceil(grouped["penalita"]).astype(int)
+    # Arrotonda penalità a 2 decimali e rinomina
+    grouped["penalita_totale"] = grouped["penalita_abs"].round(2)
+    grouped = grouped.drop(columns=["penalita_abs"])
+    
+    # Crea penalita_eccesso e penalita_difetto a 0 per compatibilità con il database
+    grouped["penalita_eccesso"] = 0
+    grouped["penalita_difetto"] = 0
 
     # Riorganizzo le colonne per coerenza con il resto dei parser
     grouped = grouped[[
@@ -1173,12 +1414,211 @@ def parse_doppia_spunta(file_path: str) -> DoppiaSpuntaResult:
         "codice_preparatore",
         "nome_preparatore",
         "totale_colli",
-        "penalita",
+        "penalita_eccesso",
+        "penalita_difetto",
         "tipo_attivita",
         "tipo",
     ]]
 
     penalita_picking["tipo_attivita"] = "PICKING"
+    
+    # Prepara dettagli per sessioni_doppia_spunta
+    sessioni_dettaglio = []
+    for (data, codice), group in sub.groupby(['data', 'codice_preparatore']):
+        # Ordina per indice originale per mantenere l'ordine del file
+        group = group.sort_index()
+        
+        # Calcola totale giornaliero per questo preparatore
+        totale_colli_giornata = int(group['totale_colli'].sum())
+        
+        # Per ora non abbiamo orari nella doppia spunta, quindi li lasciamo NULL
+        # Se in futuro li aggiungiamo, possiamo calcolare ore_gestionale
+        ore_gestionale_giornaliere = None
+        
+        for idx, (row_idx, row) in enumerate(group.iterrows(), start=1):
+            # Solo la prima riga contiene i totali giornalieri
+            # Recupera i valori originali di uvc e qtasped PRIMA della conversione numerica
+            uvc_val = None
+            qtasped_val = None
+            altro_codice_val = None
+            
+            # Usa i valori originali dalla riga corrente del gruppo
+            if '_uvc_original' in row.index:
+                uvc_raw = row['_uvc_original']
+                if pd.notna(uvc_raw):
+                    try:
+                        uvc_val = int(float(uvc_raw))
+                    except:
+                        uvc_val = None
+            
+            if '_qtasped_original' in row.index:
+                qtasped_raw = row['_qtasped_original']
+                if pd.notna(qtasped_raw):
+                    try:
+                        qtasped_val = int(float(qtasped_raw))
+                    except:
+                        qtasped_val = None
+
+            excel_row_db = None
+            if pd.notna(row_idx):
+                try:
+                    # Formula: indice pandas + header_row (0-based) + 2 (per passare alla riga Excel 1-based)
+                    excel_row_db = int(row_idx) + header_row + 2
+                except Exception:
+                    excel_row_db = None
+
+            if codice.upper() == 'DT7' and str(data) == '2025-08-18' and idx in {225, 230, 232}:
+                logger.debug(
+                    "[DT7 TRACE] data=%s idx=%s excel_row=%s qtasped=%s uvc=%s codpro=%s lotto=%s",
+                    data,
+                    idx,
+                    excel_row_db,
+                    qtasped_val,
+                    uvc_val,
+                    row.get('codpro'),
+                    row.get('lotto'),
+                )
+            # Recupera codpro e lotto se disponibili
+            codpro_val = None
+            lotto_val = None
+            diff_val = None
+            
+            if 'altro_codice' in row.index:
+                altro_raw = row['altro_codice']
+                if pd.notna(altro_raw):
+                    altro_codice_val = str(altro_raw).strip() or None
+            
+            # Recupera il valore ORIGINALE della colonna diffe dal dataframe (senza conversioni)
+            if '_diffe_original' in row.index:
+                diff_raw = row['_diffe_original']
+                # Accetta qualsiasi valore non-NaN, anche 0
+                if pd.notna(diff_raw):
+                    try:
+                        # Converti a float, accettando anche 0
+                        val = float(diff_raw)
+                        diff_val = val
+                    except (ValueError, TypeError) as e:
+                        # Se fallisce la conversione, salva None
+                        diff_val = None
+                        if idx <= 5:  # Log solo per le prime 5 righe problematiche
+                            logger.debug(f"Impossibile convertire diff_raw={diff_raw} (tipo={type(diff_raw).__name__}): {e}")
+                else:
+                    diff_val = None
+            
+            if 'codpro' in row.index:
+                codpro_raw = row['codpro']
+                if pd.notna(codpro_raw):
+                    codpro_val = str(codpro_raw).strip()
+            
+            if 'lotto' in row.index:
+                lotto_raw = row['lotto']
+                if pd.notna(lotto_raw):
+                    lotto_val = str(lotto_raw).strip()
+
+            penalita_val = None
+            if 'penalita_abs' in row.index:
+                try:
+                    val = row['penalita_abs']
+                    if pd.notna(val):
+                        # Mantieni il valore float SENZA arrotondamenti
+                        penalita_val = float(val)
+                        if idx <= 5:  # Debug per le prime 5 righe
+                            logger.debug(f"Riga {idx}: penalita_abs={val} -> penalita_val={penalita_val}")
+                except Exception as e:
+                    penalita_val = None
+                    logger.debug(f"Errore conversione penalita riga {idx}: {e}")
+
+            sessioni_dettaglio.append({
+                'data': data,
+                'codice_preparatore': codice,
+                'numero_riga': idx,
+                'excel_row': excel_row_db,
+                'ora_inizio': None,
+                'ora_fine': None,
+                'tempo_minuti': None,
+                'n_colli': int(row['totale_colli']),
+                'uvc': uvc_val,
+                'qtasped': qtasped_val,
+                'codpro': codpro_val,
+                'lotto': lotto_val,
+                'tipo': row['tipo'] if row['tipo'] else None,
+                'diff': diff_val,
+                'altro_codice': altro_codice_val,
+                'penalita': penalita_val,
+                'penalita_eccesso': int(row['penalita_eccesso']),
+                'penalita_difetto': int(row['penalita_difetto']),
+                'totale_colli_giornata': totale_colli_giornata if idx == 1 else None,
+                'ore_gestionale_giornaliere': ore_gestionale_giornaliere if idx == 1 else None
+            })
+    
+    # Salva i dettagli nel database
+    if sessioni_dettaglio:
+        try:
+            print(f"[DEBUG] sessioni_doppia_spunta da salvare: {len(sessioni_dettaglio)} (prime 2): {sessioni_dettaglio[:2]}")
+        except Exception:
+            pass
+        try:
+            from database import save_sessioni_doppia_spunta
+            save_sessioni_doppia_spunta(sessioni_dettaglio)
+        except Exception as e:
+            import traceback
+            print(f"[ERROR] Errore nel salvataggio sessioni doppia spunta: {e}")
+            print(traceback.format_exc())
+
+    # RECUPERA penalita_totale dalla tabella sessioni_doppia_spunta
+    # Per i record DOPPIA_SPUNTA usa i valori dal database
+    # Per i record PICKING lascia i valori già calcolati (sono basati su codice_picking, non salvato nelle sessioni)
+    try:
+        import mysql.connector
+        from config import MYSQL_CONFIG
+        from contextlib import closing
+        
+        conn = mysql.connector.connect(**MYSQL_CONFIG)
+        cursor = conn.cursor(dictionary=True)
+        
+        # Ottieni le date uniche dai dati raggruppati
+        date_uniche = grouped['data'].unique()
+        date_str = ', '.join([f"'{d}'" for d in date_uniche])
+        
+        # Query compatibile: usa le date specifiche invece di subquery con LIMIT
+        query = f"""
+            SELECT data, codice_preparatore, SUM(penalita) as penalita_totale
+            FROM sessioni_doppia_spunta
+            WHERE data IN ({date_str})
+            GROUP BY data, codice_preparatore
+        """
+        cursor.execute(query)
+        penalita_db = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        # Crea un dizionario per mappare (data, codice) -> penalita_totale
+        penalita_map = {}
+        for row in penalita_db:
+            key = (str(row['data']), str(row['codice_preparatore']))
+            penalita_map[key] = float(row['penalita_totale'] or 0)
+        
+        # Aggiorna SOLO grouped (DOPPIA_SPUNTA) con i valori reali dal database
+        grouped['penalita_totale'] = grouped.apply(
+            lambda row: penalita_map.get((str(row['data']), str(row['codice_preparatore'])), 0.0),
+            axis=1
+        )
+        
+        # Per penalita_picking, lascia i valori calcolati da penalita_abs
+        # perché sono basati su codice_picking che non è disponibile nelle sessioni
+        logger.info(f"Penalità DOPPIA_SPUNTA recuperate dal DB per {len(penalita_map)} combinazioni")
+        logger.info(f"Penalità PICKING usano valori calcolati ({len(penalita_picking)} record)")
+        
+        # Log di debug
+        for key, val in list(penalita_map.items())[:3]:
+            logger.info(f"  DS: {key[0]} - {key[1]}: penalità={val}")
+        for idx, row in penalita_picking.head(3).iterrows():
+            logger.info(f"  PICK: {row['data']} - {row['codice_preparatore']}: penalità={row['penalita_totale']}")
+            
+    except Exception as e:
+        logger.warning(f"Impossibile recuperare penalità dal DB, uso valori calcolati: {e}")
+        import traceback
+        logger.warning(traceback.format_exc())
 
     return DoppiaSpuntaResult(records=grouped, penalita_picking=penalita_picking)
 
@@ -1213,7 +1653,8 @@ def parse_ricevitori(file_path: str) -> pd.DataFrame:
             "codice_preparatore": str(codice).strip(),
             "nome_preparatore": "",
             "totale_colli": colli_int,
-            "penalita": 0,
+            "penalita_eccesso": 0,
+            "penalita_difetto": 0,
             "tipo_attivita": "RICEVITORI",
             "tipo": "",
         })
@@ -1226,6 +1667,6 @@ def parse_ricevitori(file_path: str) -> pd.DataFrame:
     df_grouped = df_out.groupby(
         ["data", "codice_preparatore", "nome_preparatore", "tipo_attivita", "tipo"],
         as_index=False,
-    )["totale_colli"].sum()
+    )[["totale_colli", "penalita_eccesso", "penalita_difetto"]].sum()
 
     return df_grouped

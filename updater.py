@@ -171,7 +171,7 @@ class UpdateDialog(tk.Toplevel):
 
         self._manifest: Optional[UpdateInfo] = None
         self._download_path: Optional[Path] = None
-    self._app_copy_path: Optional[Path] = None
+        self._app_copy_path: Optional[Path] = None
 
         # UI elements
         self.status_var = tk.StringVar(value="Ricerca aggiornamenti in corso...")
