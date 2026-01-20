@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import shutil
+import subprocess
 import sys
 import threading
 import tkinter as tk
@@ -290,6 +291,45 @@ class UpdateDialog(tk.Toplevel):
 
         self.progress.config(value=100, maximum=100, mode="determinate")
 
+        auto_replace_note = ""
+        if self._app_copy_path and self._app_copy_path.name.endswith("_nuovo" + self._app_copy_path.suffix):
+            app_dir = _get_app_directory()
+            if app_dir:
+                old_path = app_dir / (self._manifest.file_name if self._manifest else "")
+                new_path = self._app_copy_path
+                if old_path.name:
+                    try:
+                        batch_path = app_dir / "update_replace.bat"
+                        batch_path.write_text(
+                            "@echo off\n"
+                            "setlocal\n"
+                            f"set \"old={old_path}\"\n"
+                            f"set \"new={new_path}\"\n"
+                            ":wait\n"
+                            f"tasklist /FI \"IMAGENAME eq {old_path.name}\" | find /I \"{old_path.name}\" >nul\n"
+                            "if not errorlevel 1 (\n"
+                            "  timeout /t 1 /nobreak >nul\n"
+                            "  goto wait\n"
+                            ")\n"
+                            "if exist \"%new%\" (\n"
+                            "  move /y \"%new%\" \"%old%\" >nul\n"
+                            ")\n"
+                            "if exist \"%old%\" (\n"
+                            "  start \"\" \"%old%\"\n"
+                            ")\n"
+                            "del \"%~f0\"\n",
+                            encoding="utf-8",
+                        )
+                        subprocess.Popen(
+                            ["cmd", "/c", str(batch_path)],
+                            creationflags=subprocess.CREATE_NO_WINDOW,
+                        )
+                        auto_replace_note = (
+                            "\n\nAlla chiusura dell'applicazione la sostituzione verrà completata automaticamente."
+                        )
+                    except Exception:
+                        auto_replace_note = ""
+
         message = (
             f"Aggiornamento scaricato correttamente in:\n{self._download_path}\n\n"
             "Chiudi l'applicazione corrente e avvia il nuovo eseguibile per completare l'aggiornamento."
@@ -301,7 +341,7 @@ class UpdateDialog(tk.Toplevel):
                 f"Una copia è stata salvata anche accanto all'applicazione in:\n{self._app_copy_path}\n"
                 "Una volta chiusa l'app puoi sostituire il vecchio eseguibile con quello nuovo."
             )
-        self._set_status(message)
+        self._set_status(message + auto_replace_note)
         self.open_folder_button.config(state="normal")
 
     def _open_download_folder(self) -> None:
