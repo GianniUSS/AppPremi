@@ -130,6 +130,9 @@ class MainMenu(tk.Tk):
         
         # Crea il layout principale
         self._create_layout()
+
+        # Controllo aggiornamenti all'avvio (non blocca l'interfaccia)
+        self.after(500, self._check_updates)
         
     # All'avvio non mostriamo nessun modulo: l'area rimane vuota
     
@@ -280,6 +283,16 @@ class MainMenu(tk.Tk):
         # ===== AREA CONTENUTO PRINCIPALE =====
         self.content_frame = ttk.Frame(main_container)
         self.content_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+
+    def _check_updates(self) -> None:
+        """Avvia il controllo aggiornamenti all'avvio."""
+        try:
+            from updater import open_update_dialog
+
+            open_update_dialog(self)
+        except Exception:
+            # Evita blocchi in avvio se l'update non è disponibile
+            return
     
     def _highlight_menu_button(self, active_key):
         """Evidenzia il pulsante del menu attivo"""
