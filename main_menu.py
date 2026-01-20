@@ -271,9 +271,11 @@ class MainMenu(tk.Tk):
                 self._register_menu_button(key, btn, section)
         
         # Info in basso
+        from version import APP_VERSION
+
         info_label = tk.Label(
             menu_frame,
-            text="Versione 1.0",
+            text=f"Versione {APP_VERSION}",
             font=("Segoe UI", 9),
             bg=self.menu_bg,
             fg="#808080"
