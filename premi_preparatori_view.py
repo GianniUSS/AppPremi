@@ -2,6 +2,7 @@
 import datetime
 from contextlib import closing
 from decimal import Decimal, ROUND_HALF_UP
+import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, cast
 
@@ -347,11 +348,20 @@ class PremiPreparatoriView(tk.Frame):
 
                 sheet.freeze_panes = "A2"
 
-            messagebox.showinfo(
+            open_folder = messagebox.askyesno(
                 "Export completato",
-                f"File salvato in:\n{file_path}",
+                f"File salvato in:\n{file_path}\n\nAprire la cartella di destinazione?",
                 parent=self,
             )
+            if open_folder:
+                try:
+                    os.startfile(Path(file_path).parent)
+                except OSError:
+                    messagebox.showinfo(
+                        "Cartella",
+                        f"Apri manualmente la cartella:\n{Path(file_path).parent}",
+                        parent=self,
+                    )
         except Exception as exc:
             messagebox.showerror(
                 "Errore",

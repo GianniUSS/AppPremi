@@ -8,7 +8,7 @@ set PYTHON_BIN=.venv\Scripts\python.exe
 set PYINSTALLER_MODULE=PyInstaller
 set MAIN_SCRIPT=main.py
 set APP_NAME=GestionePremi
-set APP_NAME_ONEFILE=%APP_NAME%_onefile
+set APP_NAME_ONEFILE=%APP_NAME%
 set MYSQL_PLUGIN_SRC=.venv\Lib\site-packages\mysql\vendor\plugin\*.dll
 set MYSQL_PLUGIN_DST=mysql/vendor/plugin
 
@@ -42,6 +42,7 @@ if exist %APP_NAME_ONEFILE%.spec (
 
 echo [INFO] Avvio PyInstaller ONEFILE (tramite python -m PyInstaller)...
 call "%PYTHON_BIN%" -m %PYINSTALLER_MODULE% --onefile --noconsole --clean --name %APP_NAME_ONEFILE% "%MAIN_SCRIPT%" ^
+    --icon "assets\app_icon.ico" ^
     --collect-submodules mysql.connector.plugins ^
     --add-binary "%MYSQL_PLUGIN_SRC%";%MYSQL_PLUGIN_DST%
 
@@ -52,10 +53,6 @@ if %EXIT_CODE% neq 0 (
 )
 
 echo Build ONEFILE completata con successo. Output: dist\%APP_NAME_ONEFILE%.exe
-if exist dist\%APP_NAME_ONEFILE%.exe (
-    echo [INFO] Copia/Rinomina per release: dist\%APP_NAME%.exe
-    copy /y dist\%APP_NAME_ONEFILE%.exe dist\%APP_NAME%.exe >nul
-)
 echo ==============================================
 
 :end
