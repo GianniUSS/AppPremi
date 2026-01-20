@@ -1,5 +1,5 @@
 {
-    "latest_version": "1.2.5",
+    "latest_version": "1.2.6",
     "release_date": "2026-01-20",
     "release_notes": [
         "Update: sostituzione automatica del vecchio exe alla chiusura",
@@ -8,8 +8,8 @@
         "Export premi: dopo il salvataggio chiede di aprire la cartella di destinazione",
         "Build: icona exe aggiornata e nome onefile allineato"
     ],
-    "download_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.5/GestionePremi.exe",
-    "sha256": "8F07A20174901F1106919D4451C0DC05A14A049C08B1AC75B5118C75C2982914",
+    "download_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.6/GestionePremi.exe",
+    "sha256": "861D1019287559E6D5E098CCD9C18830D9868648A6500FB7112FE5A0DB44196B",
     "file_name": "GestionePremi.exe",
-    "icons_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.5/icons-v1.2.5.zip"
+    "icons_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.6/icons-v1.2.6.zip"
 }
