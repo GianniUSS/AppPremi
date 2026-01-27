@@ -335,7 +335,7 @@ class UpdateDialog(tk.Toplevel):
 
         message = (
             f"Aggiornamento scaricato correttamente in:\n{self._download_path}\n\n"
-            "Chiudi l'applicazione corrente e avvia il nuovo eseguibile per completare l'aggiornamento."
+            "Chiudi l'applicazione corrente: la nuova versione verrà avviata automaticamente."
         )
 
         if self._app_copy_path:
@@ -347,13 +347,64 @@ class UpdateDialog(tk.Toplevel):
         self._set_status(message + auto_replace_note)
         self.open_folder_button.config(state="normal")
 
+    def _schedule_restart_after_exit(self) -> None:
+        if not self._download_path:
+            return
+
+        new_path = self._app_copy_path or self._download_path
+        if not new_path:
+            return
+
+        old_path = Path(sys.executable).resolve() if getattr(sys, "frozen", False) else None
+        pid = os.getpid()
+
+        try:
+            _DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            pass
+
+        batch_dir = _DOWNLOAD_DIR if _DOWNLOAD_DIR.exists() else new_path.parent
+        batch_path = batch_dir / "update_restart.bat"
+
+        old_path_str = str(old_path) if old_path else ""
+        new_path_str = str(new_path)
+
+        batch_path.write_text(
+            "@echo off\n"
+            "setlocal\n"
+            f"set \"pid={pid}\"\n"
+            f"set \"old={old_path_str}\"\n"
+            f"set \"new={new_path_str}\"\n"
+            ":wait\n"
+            "tasklist /FI \"PID eq %pid%\" | find \"%pid%\" >nul\n"
+            "if not errorlevel 1 (\n"
+            "  timeout /t 1 /nobreak >nul\n"
+            "  goto wait\n"
+            ")\n"
+            "set \"moved=0\"\n"
+            "if exist \"%new%\" (\n"
+            "  if /I not \"%new%\"==\"%old%\" (\n"
+            "    move /y \"%new%\" \"%old%\" >nul\n"
+            "    if not errorlevel 1 set \"moved=1\"\n"
+            "  ) else (\n"
+            "    set \"moved=1\"\n"
+            "  )\n"
+            ")\n"
+            "if \"%moved%\"==\"1\" (\n"
+            "  if exist \"%old%\" start \"\" \"%old%\"\n"
+            ") else (\n"
+            "  if exist \"%new%\" start \"\" \"%new%\"\n"
+            ")\n"
+            "del \"%~f0\"\n",
+            encoding="utf-8",
+        )
+
+        subprocess.Popen(["cmd", "/c", str(batch_path)], creationflags=subprocess.CREATE_NO_WINDOW)
+
     def _on_close_clicked(self) -> None:
         if self._download_path and self._download_path.exists():
             try:
-                if not self._auto_replace_active:
-                    target = self._app_copy_path or self._download_path
-                    if target and target.exists():
-                        subprocess.Popen([str(target)], close_fds=True)
+                self._schedule_restart_after_exit()
             except Exception:
                 pass
 
