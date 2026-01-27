@@ -14,12 +14,20 @@ set MYSQL_PLUGIN_DST=mysql/vendor/plugin
 set PYTHON_DLL=
 set ADD_PYDLL=
 set PYTHON_DLL_TMP=%TEMP%\pythondll.txt
+set VCRUNTIME_DLL_TMP=%TEMP%\vcruntimedlls.txt
+set ADD_VCRUNTIME=
 
 if exist "%PYTHON_DLL_TMP%" del /f "%PYTHON_DLL_TMP%"
 "%PYTHON_BIN%" -c "import sys, os; print(os.path.join(sys.base_prefix, 'python{}{}.dll'.format(sys.version_info[0], sys.version_info[1])))" > "%PYTHON_DLL_TMP%"
 set /p PYTHON_DLL=<"%PYTHON_DLL_TMP%"
 if exist "%PYTHON_DLL%" (
     set ADD_PYDLL=--add-binary "%PYTHON_DLL%";.
+)
+
+if exist "%VCRUNTIME_DLL_TMP%" del /f "%VCRUNTIME_DLL_TMP%"
+"%PYTHON_BIN%" -c "import os, sys; names=('vcruntime140.dll','vcruntime140_1.dll'); paths=[sys.base_prefix, os.path.join(sys.base_prefix,'DLLs'), os.path.join(os.environ.get('SystemRoot','C:\\Windows'),'System32')]; found=[next((os.path.join(p,n) for p in paths if os.path.exists(os.path.join(p,n))), '') for n in names]; print('\n'.join([p for p in found if p]))" > "%VCRUNTIME_DLL_TMP%"
+for /f "usebackq delims=" %%A in ("%VCRUNTIME_DLL_TMP%") do (
+    if exist "%%A" set "ADD_VCRUNTIME=!ADD_VCRUNTIME! --add-binary ^"%%A^";."
 )
 
 if not exist "%PYTHON_BIN%" (
@@ -55,7 +63,7 @@ call "%PYTHON_BIN%" -m %PYINSTALLER_MODULE% --onefile --noconsole --clean --name
     --icon "assets\app_icon.ico" ^
     --collect-submodules mysql.connector.plugins ^
     --add-binary "%MYSQL_PLUGIN_SRC%";%MYSQL_PLUGIN_DST% ^
-    %ADD_PYDLL%
+    %ADD_PYDLL% %ADD_VCRUNTIME%
 
 set EXIT_CODE=%ERRORLEVEL%
 if %EXIT_CODE% neq 0 (
