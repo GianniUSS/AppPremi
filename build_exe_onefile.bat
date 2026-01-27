@@ -11,6 +11,16 @@ set APP_NAME=GestionePremi
 set APP_NAME_ONEFILE=%APP_NAME%
 set MYSQL_PLUGIN_SRC=.venv\Lib\site-packages\mysql\vendor\plugin\*.dll
 set MYSQL_PLUGIN_DST=mysql/vendor/plugin
+set PYTHON_DLL=
+set ADD_PYDLL=
+set PYTHON_DLL_TMP=%TEMP%\pythondll.txt
+
+if exist "%PYTHON_DLL_TMP%" del /f "%PYTHON_DLL_TMP%"
+"%PYTHON_BIN%" -c "import sys, os; print(os.path.join(sys.base_prefix, 'python{}{}.dll'.format(sys.version_info[0], sys.version_info[1])))" > "%PYTHON_DLL_TMP%"
+set /p PYTHON_DLL=<"%PYTHON_DLL_TMP%"
+if exist "%PYTHON_DLL%" (
+    set ADD_PYDLL=--add-binary "%PYTHON_DLL%";.
+)
 
 if not exist "%PYTHON_BIN%" (
     echo [ERRORE] Interpreter Python non trovato in %%PYTHON_BIN%%
@@ -44,7 +54,8 @@ echo [INFO] Avvio PyInstaller ONEFILE (tramite python -m PyInstaller)...
 call "%PYTHON_BIN%" -m %PYINSTALLER_MODULE% --onefile --noconsole --clean --name %APP_NAME_ONEFILE% "%MAIN_SCRIPT%" ^
     --icon "assets\app_icon.ico" ^
     --collect-submodules mysql.connector.plugins ^
-    --add-binary "%MYSQL_PLUGIN_SRC%";%MYSQL_PLUGIN_DST%
+    --add-binary "%MYSQL_PLUGIN_SRC%";%MYSQL_PLUGIN_DST% ^
+    %ADD_PYDLL%
 
 set EXIT_CODE=%ERRORLEVEL%
 if %EXIT_CODE% neq 0 (

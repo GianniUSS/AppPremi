@@ -173,12 +173,14 @@ class UpdateDialog(tk.Toplevel):
         self._manifest: Optional[UpdateInfo] = None
         self._download_path: Optional[Path] = None
         self._app_copy_path: Optional[Path] = None
+        self._auto_replace_active = False
 
         # UI elements
         self.status_var = tk.StringVar(value="Ricerca aggiornamenti in corso...")
         self.progress_var = tk.DoubleVar(value=0.0)
 
         self._build_ui()
+        self.protocol("WM_DELETE_WINDOW", self._on_close_clicked)
 
         # Avvia controllo in thread separato
         threading.Thread(target=self._check_for_updates, daemon=True).start()
@@ -204,7 +206,7 @@ class UpdateDialog(tk.Toplevel):
         self.open_folder_button = ttk.Button(self.buttons_frame, text="Apri cartella download", command=self._open_download_folder, state="disabled")
         self.open_folder_button.grid(row=0, column=1, padx=5)
 
-        ttk.Button(self.buttons_frame, text="Chiudi", command=self.destroy).grid(row=0, column=2, padx=5)
+        ttk.Button(self.buttons_frame, text="Chiudi", command=self._on_close_clicked).grid(row=0, column=2, padx=5)
 
     # ------------------------------------------------------------------ actions
     def _check_for_updates(self) -> None:
@@ -324,6 +326,7 @@ class UpdateDialog(tk.Toplevel):
                             ["cmd", "/c", str(batch_path)],
                             creationflags=subprocess.CREATE_NO_WINDOW,
                         )
+                        self._auto_replace_active = True
                         auto_replace_note = (
                             "\n\nAlla chiusura dell'applicazione la sostituzione verrà completata automaticamente."
                         )
@@ -343,6 +346,28 @@ class UpdateDialog(tk.Toplevel):
             )
         self._set_status(message + auto_replace_note)
         self.open_folder_button.config(state="normal")
+
+    def _on_close_clicked(self) -> None:
+        if self._download_path and self._download_path.exists():
+            try:
+                if not self._auto_replace_active:
+                    target = self._app_copy_path or self._download_path
+                    if target and target.exists():
+                        subprocess.Popen([str(target)], close_fds=True)
+            except Exception:
+                pass
+
+            try:
+                self.master.after(200, self.master.destroy)
+            except Exception:
+                pass
+
+            try:
+                self.destroy()
+            finally:
+                os._exit(0)
+
+        self.destroy()
 
     def _open_download_folder(self) -> None:
         if not self._download_path:
