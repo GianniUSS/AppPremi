@@ -3,6 +3,7 @@ Finestra di visualizzazione dati in stile Excel.
 """
 import datetime
 import calendar
+import re
 import threading
 import time
 import tkinter as tk
@@ -69,6 +70,7 @@ class DataViewer:
         self._sync_in_progress = False
         self._last_filters = None
         self._stats_text_before_sync = ""
+        self._sort_reverse: Dict[str, bool] = {}
 
         self._setup_ui()
         self._update_filter_states()
@@ -614,9 +616,53 @@ class DataViewer:
             self.nuove_aperture_button.pack_forget()
 
     def _sort_by_column(self, col: str) -> None:
-        """Ordina rapidamente la tabella ricaricando i dati (stub)."""
-        # TODO: implementare un ordinamento client-side se necessario.
-        pass
+        """Ordina la tabella client-side in base alla colonna selezionata."""
+        reverse = self._sort_reverse.get(col, False)
+        items = list(self.tree.get_children(""))
+
+        def sort_key(item_id: str):
+            value = self.tree.set(item_id, col)
+            return self._coerce_sort_value(value)
+
+        items.sort(key=sort_key, reverse=reverse)
+
+        for index, item_id in enumerate(items):
+            self.tree.move(item_id, "", index)
+            tag = "evenrow" if index % 2 == 0 else "oddrow"
+            self.tree.item(item_id, tags=(tag,))
+
+        self._sort_reverse[col] = not reverse
+
+    @staticmethod
+    def _coerce_sort_value(value: Any) -> Any:
+        if value is None:
+            return (1, "")
+
+        if isinstance(value, (int, float, datetime.date, datetime.datetime)):
+            return (0, value)
+
+        text = str(value).strip()
+        if not text:
+            return (1, "")
+
+        # Date parsing
+        for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%Y-%m-%d %H:%M:%S"):
+            try:
+                return (0, datetime.datetime.strptime(text, fmt))
+            except ValueError:
+                pass
+
+        # Number parsing (supporta formati it/en)
+        normalized = text.replace(" ", "")
+        if re.match(r"^-?\d{1,3}(\.\d{3})*(,\d+)?$", normalized):
+            normalized = normalized.replace(".", "").replace(",", ".")
+        elif re.match(r"^-?\d+([\.,]\d+)?$", normalized):
+            normalized = normalized.replace(",", ".")
+
+        try:
+            return (0, float(normalized))
+        except ValueError:
+            return (0, text.lower())
 
     def _show_details(self, event) -> None:
         """Mostra i dettagli del record selezionato."""

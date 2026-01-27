@@ -1,8 +1,10 @@
 """
 Interfaccia principale dell'applicazione con menu laterale
 """
+import datetime
+import os
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 
 
 class CollapsibleMenuSection(tk.Frame):
@@ -232,6 +234,7 @@ class MainMenu(tk.Tk):
                     ("premi_preparatori", "Premi Preparatori", self._show_premi_preparatori),
                     ("premi_ricevimento", "Premi Ricevimento", self._show_premi_ricevimento),
                     ("premi_doppia_spunta", "Premi Doppia Spunta", self._show_premi_doppia_spunta),
+                    ("export_hr", "Export HR", self._show_export_hr),
                 ],
             ),
             (
@@ -529,6 +532,165 @@ class MainMenu(tk.Tk):
                 "Errore",
                 f"Impossibile caricare il modulo Performance Preparatori:\n{exc}",
             )
+
+    def _show_export_hr(self):
+        """Apre la finestra di export HR (file unico con 4 attività)."""
+        dialog = tk.Toplevel(self)
+        dialog.title("Export HR")
+        dialog.geometry("420x220")
+        dialog.configure(bg="#f5f5f5")
+
+        tk.Label(
+            dialog,
+            text="Export HR",
+            font=("Segoe UI", 14, "bold"),
+            bg="#f5f5f5",
+        ).pack(pady=(16, 8))
+
+        form = tk.Frame(dialog, bg="#f5f5f5")
+        form.pack(fill="x", padx=16, pady=(0, 12))
+
+        mesi = [
+            "Gennaio",
+            "Febbraio",
+            "Marzo",
+            "Aprile",
+            "Maggio",
+            "Giugno",
+            "Luglio",
+            "Agosto",
+            "Settembre",
+            "Ottobre",
+            "Novembre",
+            "Dicembre",
+        ]
+
+        tk.Label(form, text="Anno:", bg="#f5f5f5").grid(row=0, column=0, sticky="w", padx=(0, 6), pady=6)
+        anno_var = tk.StringVar()
+        anno_entry = ttk.Entry(form, textvariable=anno_var, width=10)
+        anno_entry.grid(row=0, column=1, sticky="w", padx=(0, 12), pady=6)
+
+        tk.Label(form, text="Mese:", bg="#f5f5f5").grid(row=1, column=0, sticky="w", padx=(0, 6), pady=6)
+        mese_var = tk.StringVar()
+        mese_combo = ttk.Combobox(form, textvariable=mese_var, values=mesi, state="readonly", width=16)
+        mese_combo.grid(row=1, column=1, sticky="w", padx=(0, 12), pady=6)
+
+        anno_var.set(str(datetime.date.today().year))
+        if mesi:
+            mese_combo.current(0)
+
+        def _do_export() -> None:
+            anno_str = anno_var.get().strip()
+            mese_label = mese_var.get().strip()
+            if not anno_str or not mese_label:
+                messagebox.showwarning("Dati mancanti", "Seleziona anno e mese.", parent=dialog)
+                return
+            try:
+                anno = int(anno_str)
+                mese = mesi.index(mese_label) + 1
+            except (ValueError, IndexError):
+                messagebox.showerror("Errore", "Anno o mese non validi.", parent=dialog)
+                return
+
+            try:
+                from database import (
+                    fetch_premi_carrellisti,
+                    fetch_premi_preparatori,
+                    fetch_premi_ricevitori,
+                    fetch_premi_doppia_spunta,
+                )
+            except Exception as exc:
+                messagebox.showerror("Errore", f"Impossibile caricare dati premi:\n{exc}", parent=dialog)
+                return
+
+            try:
+                carrellisti = fetch_premi_carrellisti(anno, mese)
+                preparatori = fetch_premi_preparatori(anno, mese)
+                ricevitori = fetch_premi_ricevitori(anno, mese)
+                doppia_spunta = fetch_premi_doppia_spunta(anno, mese)
+            except Exception as exc:
+                messagebox.showerror("Errore", f"Errore nel recupero dati:\n{exc}", parent=dialog)
+                return
+
+            rows: list[dict[str, object]] = []
+
+            def add_rows(src, attivita_label: str) -> None:
+                for item in src or []:
+                    premio = float(item.get("premio_totale") or 0)
+                    if premio <= 0:
+                        continue
+                    rows.append(
+                        {
+                            "Codice": item.get("codice_preparatore") or "",
+                            "Nome": item.get("nome_preparatore") or "",
+                            "Premio Totale (EUR)": premio,
+                            "attivita": attivita_label,
+                        }
+                    )
+
+            add_rows(preparatori, "PICKER")
+            add_rows(carrellisti, "CARRELLISTI")
+            add_rows(ricevitori, "RICEVITORI")
+            add_rows(doppia_spunta, "DOPPIA_SPUNTA")
+
+            if not rows:
+                messagebox.showinfo("Nessun dato", "Nessun premio trovato per il periodo selezionato.", parent=dialog)
+                return
+
+            default_name = f"Export_HR_{anno}_{mese:02d}.xlsx"
+            file_path = filedialog.asksaveasfilename(
+                title="Esporta HR",
+                defaultextension=".xlsx",
+                filetypes=[("File Excel", "*.xlsx"), ("Tutti i file", "*.*")],
+                initialfile=default_name,
+            )
+            if not file_path:
+                return
+
+            try:
+                import pandas as pd
+
+                df = pd.DataFrame(rows)
+                df.to_excel(file_path, index=False)
+
+                try:
+                    from openpyxl import load_workbook
+
+                    wb = load_workbook(file_path)
+                    ws = wb.active
+                    for column_cells in ws.columns:
+                        max_len = 0
+                        col_letter = column_cells[0].column_letter
+                        for cell in column_cells:
+                            value = "" if cell.value is None else str(cell.value)
+                            if len(value) > max_len:
+                                max_len = len(value)
+                        ws.column_dimensions[col_letter].width = max(10, min(60, max_len + 2))
+                    wb.save(file_path)
+                except Exception:
+                    pass
+            except Exception as exc:
+                messagebox.showerror("Errore", f"Errore durante l'export:\n{exc}", parent=dialog)
+                return
+
+            messagebox.showinfo("Export completato", "File creato con successo.", parent=dialog)
+
+            try:
+                folder_path = os.path.dirname(file_path)
+                if messagebox.askyesno(
+                    "Apri cartella",
+                    "Vuoi aprire la cartella di destinazione?",
+                    parent=dialog,
+                ):
+                    os.startfile(folder_path)
+                dialog.destroy()
+            except Exception:
+                pass
+
+        btn_frame = tk.Frame(dialog, bg="#f5f5f5")
+        btn_frame.pack(fill="x", padx=16, pady=(0, 12))
+
+        ttk.Button(btn_frame, text="Esporta", command=_do_export).pack(side="right")
 
     def _show_performance_ricevimento(self):
         """Mostra il modulo performance ricevimento (placeholder)."""

@@ -2,27 +2,63 @@
 Gestione database: connessioni, creazione tabelle e operazioni CRUD.
 """
 import datetime
+import random
 from contextlib import closing
 from typing import Any, Dict, List, Optional, Sequence, Tuple, cast
 import mysql.connector
 from mysql.connector import errorcode
-from config import MYSQL_CONFIG, TABLE_NAME
+from config import MYSQL_CONFIG, MYSQL_CONFIG_MAIN, TABLE_NAME
 
 
 def _column_exists(cur: Any, table_name: str, column_name: str) -> bool:
-        """Return True if the given column exists in the specified table."""
-        cur.execute(
-                """
-                SELECT COUNT(*)
-                FROM INFORMATION_SCHEMA.COLUMNS
-                WHERE TABLE_SCHEMA = DATABASE()
-                    AND TABLE_NAME = %s
-                    AND COLUMN_NAME = %s
-                """,
-                (table_name, column_name),
-        )
-        result = cur.fetchone()
-        return bool(result and result[0])
+    """Return True if the given column exists in the specified table."""
+    cur.execute(
+        """
+        SELECT COUNT(*)
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = %s
+            AND COLUMN_NAME = %s
+        """,
+        (table_name, column_name),
+    )
+    result = cur.fetchone()
+    if not result:
+        return False
+    if isinstance(result, dict):
+        return bool(next(iter(result.values()), 0))
+    return bool(result[0])
+
+
+def _tim_column_exists(cur: Any, table_name: str, column_name: str) -> bool:
+    """Return True if the given column exists in the TIM schema."""
+    cur.execute(
+        """
+        SELECT COUNT(*)
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = %s
+            AND COLUMN_NAME = %s
+        """,
+        (table_name, column_name),
+    )
+    result = cur.fetchone()
+    if not result:
+        return False
+    if isinstance(result, dict):
+        return bool(next(iter(result.values()), 0))
+    return bool(result[0])
+
+
+def _generate_tim_long_id(prefix: str = "001") -> int:
+    """Genera un id numerico stile legacy con prefisso a 3 cifre."""
+    now = datetime.datetime.now()
+    date_part = now.strftime("%y%m%d")  # 6 cifre
+    ms_part = int(now.timestamp() * 1000) % 10_000_000  # 7 cifre
+    prog_part = random.randint(0, 99)  # 2 cifre
+    rand_part = random.randint(0, 9)  # 1 cifra
+    id_str = f"{prefix}{date_part}{ms_part:07d}{prog_part:02d}{rand_part}"
+    return int(id_str)
 
 
 def ensure_table_and_indexes() -> None:
@@ -1448,6 +1484,92 @@ def fetch_anomalie(
             return cast(List[Dict[str, Any]], result)
 
 
+def fetch_anomalia_by_id(anomalia_id: int) -> Optional[Dict[str, Any]]:
+    """Recupera una singola anomalia per ID."""
+    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+        with closing(conn.cursor(dictionary=True)) as cur:
+            cur.execute(
+                """
+                SELECT id, tipo_anomalia, data_rilevamento, anno, mese, codice_preparatore, nome_preparatore,
+                       tipo_attivita, ore_tim, dettagli, stato, note, data_creazione, data_aggiornamento
+                FROM anomalie
+                WHERE id = %s
+                """,
+                (anomalia_id,),
+            )
+            row = cur.fetchone()
+            return cast(Optional[Dict[str, Any]], row)
+
+
+def fetch_attivita_tim(
+    codice_preparatore: str,
+    data_riferimento: datetime.date,
+) -> List[Dict[str, Any]]:
+    """Recupera le attività TIM con inizio/fine e durata (minuti) per codice e data."""
+    if not codice_preparatore:
+        return []
+
+    codice = codice_preparatore.strip().lower()
+    if not codice:
+        return []
+
+    with closing(mysql.connector.connect(**MYSQL_CONFIG_MAIN)) as conn:
+        with closing(conn.cursor(dictionary=True)) as cur:
+            query = """
+                SELECT
+                    a.id AS attivita_id,
+                    ta.id AS tipo_attivita_id,
+                    ta.descrizione AS attivita,
+                    a.data_inizio,
+                    a.data_fine,
+                    GREATEST(
+                        TIMESTAMPDIFF(MINUTE, a.data_inizio, a.data_fine) - COALESCE(a.pausa, 0),
+                        0
+                    ) AS durata_minuti
+                FROM attivita a
+                JOIN tipoattivita ta ON a.tipo_attivita_id = ta.id
+                JOIN utente u ON a.utente_id = u.id
+                JOIN codicegestionale cg ON cg.utente_id = u.id
+                WHERE LOWER(cg.codice) = %s
+                  AND a.data_riferimento = %s
+                  AND %s BETWEEN cg.valido_dal AND COALESCE(cg.valido_al, '9999-12-31')
+                ORDER BY a.data_inizio
+            """
+            cur.execute(query, (codice, data_riferimento, data_riferimento))
+            rows = cur.fetchall() or []
+            return cast(List[Dict[str, Any]], rows)
+
+
+def fetch_tipi_attivita_tim() -> List[Dict[str, Any]]:
+    """Recupera l'elenco dei tipi attività da TIM."""
+    with closing(mysql.connector.connect(**MYSQL_CONFIG_MAIN)) as conn:
+        with closing(conn.cursor(dictionary=True)) as cur:
+            cur.execute(
+                """
+                SELECT id, descrizione
+                FROM tipoattivita
+                ORDER BY descrizione
+                """
+            )
+            rows = cur.fetchall() or []
+            return cast(List[Dict[str, Any]], rows)
+
+
+def update_attivita_tim(attivita_id: int, tipo_attivita_id: int) -> None:
+    """Aggiorna il tipo attività di una singola attività su TIM."""
+    with closing(mysql.connector.connect(**MYSQL_CONFIG_MAIN)) as conn:
+        with closing(conn.cursor()) as cur:
+            cur.execute(
+                """
+                UPDATE attivita
+                SET tipo_attivita_id = %s
+                WHERE id = %s
+                """,
+                (tipo_attivita_id, attivita_id),
+            )
+            conn.commit()
+
+
 def fetch_report_templates(
     attivi_solo: bool = True,
     attivita: Optional[str] = None,
@@ -1513,6 +1635,36 @@ def update_anomalia_stato(anomalia_id: int, nuovo_stato: str, note: Optional[str
                     """,
                     (nuovo_stato, anomalia_id),
                 )
+
+
+def resolve_anomalie_codice_non_abbinato(codice_preparatore: str, note: Optional[str] = None) -> None:
+    """Imposta RISOLTA per tutte le anomalie CODICE_NON_ABBINATO di un codice."""
+    codice = (codice_preparatore or "").strip().upper()
+    if not codice:
+        return
+    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+        with closing(conn.cursor()) as cur:
+            if note:
+                cur.execute(
+                    """
+                    UPDATE anomalie
+                    SET stato = 'RISOLTA', note = %s
+                    WHERE tipo_anomalia = 'CODICE_NON_ABBINATO'
+                      AND codice_preparatore = %s
+                    """,
+                    (note, codice),
+                )
+            else:
+                cur.execute(
+                    """
+                    UPDATE anomalie
+                    SET stato = 'RISOLTA'
+                    WHERE tipo_anomalia = 'CODICE_NON_ABBINATO'
+                      AND codice_preparatore = %s
+                    """,
+                    (codice,),
+                )
+            conn.commit()
             conn.commit()
 
 
@@ -2289,4 +2441,151 @@ def delete_sessioni_doppia_spunta(data: datetime.date, codice_preparatore: Optio
                     "DELETE FROM sessioni_doppia_spunta WHERE data = %s",
                     (data,)
                 )
+            conn.commit()
+
+
+def search_utenti_tim(nominativo: str) -> List[Dict[str, Any]]:
+    """Cerca utenti TIM per nominativo (nome/cognome)."""
+    nome = (nominativo or "").strip()
+    if not nome:
+        return []
+
+    like = f"%{nome}%"
+    with closing(mysql.connector.connect(**MYSQL_CONFIG_MAIN)) as conn:
+        with closing(conn.cursor(dictionary=True)) as cur:
+            has_matricola = _tim_column_exists(cur, "utente", "matricola")
+            has_badge = _tim_column_exists(cur, "utente", "badge")
+
+            extra_fields: List[str] = []
+            if has_matricola:
+                extra_fields.append("matricola")
+            if has_badge:
+                extra_fields.append("badge")
+
+            extra_select = (", " + ", ".join(extra_fields)) if extra_fields else ""
+
+            query = f"""
+                SELECT id, nome, cognome{extra_select}
+                FROM utente
+                WHERE nome LIKE %s OR cognome LIKE %s OR CONCAT(cognome, ' ', nome) LIKE %s
+                ORDER BY cognome, nome
+            """
+            cur.execute(query, (like, like, like))
+            rows = cur.fetchall() or []
+            return cast(List[Dict[str, Any]], rows)
+
+
+def fetch_codici_gestionali_by_utente(utente_id: int) -> List[Dict[str, Any]]:
+    """Recupera i codici gestionali associati a un utente TIM."""
+    with closing(mysql.connector.connect(**MYSQL_CONFIG_MAIN)) as conn:
+        with closing(conn.cursor(dictionary=True)) as cur:
+            has_reparto = _tim_column_exists(cur, "codicegestionale", "reparto")
+            reparto_select = "cg.reparto" if has_reparto else "NULL AS reparto"
+
+            query = f"""
+                SELECT
+                    cg.id AS record_id,
+                    cg.tipo_attivita_id,
+                    COALESCE(cg.descrizione, cg.codice) AS descrizione,
+                    ta.descrizione AS attivita,
+                    cg.codice,
+                    cg.valido_dal,
+                    cg.valido_al,
+                    {reparto_select}
+                FROM codicegestionale cg
+                LEFT JOIN tipoattivita ta ON cg.tipo_attivita_id = ta.id
+                WHERE cg.utente_id = %s
+                ORDER BY cg.valido_dal DESC, cg.codice
+            """
+            cur.execute(query, (utente_id,))
+            rows = cur.fetchall() or []
+            return cast(List[Dict[str, Any]], rows)
+
+
+def update_codice_gestionale_tim(
+    record_id: int,
+    tipo_attivita_id: int,
+    codice: str,
+    valido_dal: datetime.date,
+    valido_al: Optional[datetime.date],
+    descrizione: Optional[str] = None,
+    reparto: Optional[str] = None,
+) -> None:
+    """Aggiorna un record in codicegestionale su TIM."""
+    with closing(mysql.connector.connect(**MYSQL_CONFIG_MAIN)) as conn:
+        with closing(conn.cursor()) as cur:
+            has_descrizione = _tim_column_exists(cur, "codicegestionale", "descrizione")
+            has_reparto = _tim_column_exists(cur, "codicegestionale", "reparto")
+
+            set_parts: List[str] = [
+                "tipo_attivita_id = %s",
+                "codice = %s",
+                "valido_dal = %s",
+                "valido_al = %s",
+            ]
+            params: List[Any] = [tipo_attivita_id, codice, valido_dal, valido_al]
+
+            if has_descrizione:
+                set_parts.append("descrizione = %s")
+                params.append(descrizione)
+            if has_reparto:
+                set_parts.append("reparto = %s")
+                params.append(reparto)
+
+            params.append(record_id)
+
+            query = f"""
+                UPDATE codicegestionale
+                SET {', '.join(set_parts)}
+                WHERE id = %s
+            """
+            cur.execute(query, params)
+            conn.commit()
+
+
+def insert_codice_gestionale_tim(
+    utente_id: int,
+    tipo_attivita_id: int,
+    codice: str,
+    valido_dal: datetime.date,
+    valido_al: Optional[datetime.date],
+    descrizione: Optional[str] = None,
+    reparto: Optional[str] = None,
+) -> None:
+    """Inserisce un nuovo record in codicegestionale su TIM."""
+    with closing(mysql.connector.connect(**MYSQL_CONFIG_MAIN)) as conn:
+        with closing(conn.cursor()) as cur:
+            has_id = _tim_column_exists(cur, "codicegestionale", "id")
+            has_descrizione = _tim_column_exists(cur, "codicegestionale", "descrizione")
+            has_reparto = _tim_column_exists(cur, "codicegestionale", "reparto")
+
+            columns: List[str] = []
+            values: List[Any] = []
+
+            if has_id:
+                columns.append("id")
+                values.append(_generate_tim_long_id("001"))
+
+            columns.extend([
+                "utente_id",
+                "tipo_attivita_id",
+                "codice",
+                "valido_dal",
+                "valido_al",
+            ])
+            values.extend([utente_id, tipo_attivita_id, codice, valido_dal, valido_al])
+
+            if has_descrizione:
+                columns.append("descrizione")
+                values.append(descrizione)
+            if has_reparto:
+                columns.append("reparto")
+                values.append(reparto)
+
+            placeholders = ", ".join(["%s"] * len(columns))
+            query = f"""
+                INSERT INTO codicegestionale ({', '.join(columns)})
+                VALUES ({placeholders})
+            """
+            cur.execute(query, values)
             conn.commit()

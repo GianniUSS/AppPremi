@@ -14,9 +14,18 @@ from database import (
     delete_anomalia,
     ensure_table_and_indexes,
     fetch_anomalie,
+    fetch_anomalia_by_id,
+    fetch_attivita_tim,
+    fetch_codici_gestionali_by_utente,
+    fetch_tipi_attivita_tim,
     fetch_report_templates,
     execute_custom_query,
+    insert_codice_gestionale_tim,
+    resolve_anomalie_codice_non_abbinato,
+    search_utenti_tim,
     update_anomalia_stato,
+    update_attivita_tim,
+    update_codice_gestionale_tim,
 )
 from ui_components import create_button
 
@@ -35,7 +44,6 @@ ANOMALIA_STATO_CHOICES: List[str] = [
     "Tutti",
     "APERTA",
     "VERIFICATA",
-    "RISOLTA"
 ]
 
 MONTH_CHOICES: List[Tuple[str, Optional[int]]] = [
@@ -107,6 +115,7 @@ class AnomalieView:
         self.use_date_range_var = tk.BooleanVar(value=False)
         self.report_var = tk.StringVar()
         self.report_options: Dict[str, Dict[str, Any]] = {}
+        self._sort_reverse: Dict[str, bool] = {}
 
         self._setup_ui()
         self._load_report_templates()
@@ -187,7 +196,7 @@ class AnomalieView:
         # Stato
         tk.Label(filter_frame, text="Stato:", font=FONTS["label"], bg=COLORS["background"], anchor="w").grid(row=0, column=2, sticky="w", padx=(0, 6), pady=10)
         self.stato_var = tk.StringVar(value="Tutti")
-        stato_menu = ttk.Combobox(filter_frame, textvariable=self.stato_var, values=["Tutti", "APERTA", "VERIFICATA", "RISOLTA"], width=16, state="readonly", font=FONTS["input"])
+        stato_menu = ttk.Combobox(filter_frame, textvariable=self.stato_var, values=["Tutti", "APERTA", "VERIFICATA"], width=16, state="readonly", font=FONTS["input"])
         stato_menu.grid(row=0, column=3, sticky="ew", padx=(0, 16), pady=10)
 
         # Codice
@@ -320,7 +329,7 @@ class AnomalieView:
             table_frame,
             columns=columns,
             show="headings",
-            selectmode="browse",
+            selectmode="extended",
         )
         vsb = ttk.Scrollbar(table_frame, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=vsb.set)
@@ -340,7 +349,7 @@ class AnomalieView:
             "stato": "Stato",
         }
         for column, title in headers.items():
-            self.tree.heading(column, text=title)
+            self.tree.heading(column, text=title, command=lambda c=column: self._sort_by_column(c))
 
         self.tree.column("id", width=60, anchor="center")
         self.tree.column("tipo", width=170, anchor="w")
@@ -357,6 +366,8 @@ class AnomalieView:
         self.tree.tag_configure("VERIFICATA", background="#FFF6DA")
         self.tree.tag_configure("RISOLTA", background="#E4FFDF")
 
+        self.tree.bind("<Double-1>", self._open_attivita_form)
+
         # Footer con azioni
         footer_frame = tk.Frame(
             self.root,
@@ -371,15 +382,8 @@ class AnomalieView:
 
         create_button(
             actions_frame,
-            text="✓ Verificata",
+            text="Da verificare",
             command=lambda: self._change_stato("VERIFICATA"),
-            variant="primary",
-        ).pack(side="left", padx=4)
-
-        create_button(
-            actions_frame,
-            text="✓ Risolta",
-            command=lambda: self._change_stato("RISOLTA"),
             variant="primary",
         ).pack(side="left", padx=4)
 
@@ -406,6 +410,819 @@ class AnomalieView:
             fg=COLORS["text_light"],
         )
         self.stats_label.pack(side="right", padx=12)
+
+    def _open_attivita_form(self, event=None) -> None:
+        selection = self.tree.selection()
+        if not selection:
+            return
+
+        item = self.tree.item(selection[0])
+        values = item.get("values") or []
+        if not values:
+            return
+
+        tipo_anomalia = values[1] if len(values) > 1 else ""
+        if str(tipo_anomalia).strip() == "CODICE_NON_ABBINATO":
+            self._open_codici_gestionali_form(values)
+            return
+
+        try:
+            anomalia_id = int(values[0])
+        except (TypeError, ValueError):
+            return
+
+        anomalia = fetch_anomalia_by_id(anomalia_id)
+        if not anomalia:
+            messagebox.showwarning(
+                "Dettagli non disponibili",
+                "Impossibile recuperare i dettagli dell'anomalia selezionata.",
+                parent=self.dialog_parent,
+            )
+            return
+
+        codice = anomalia.get("codice_preparatore") or ""
+        nome = anomalia.get("nome_preparatore") or ""
+        data_ril = anomalia.get("data_rilevamento")
+        if not data_ril:
+            messagebox.showwarning(
+                "Dettagli non disponibili",
+                "Data di riferimento mancante per l'anomalia selezionata.",
+                parent=self.dialog_parent,
+            )
+            return
+
+        try:
+            attivita_rows = fetch_attivita_tim(codice, data_ril)
+        except Exception as exc:
+            messagebox.showerror(
+                "Errore",
+                f"Impossibile recuperare le attività da TIM:\n{exc}",
+                parent=self.dialog_parent,
+            )
+            return
+
+        dialog = tk.Toplevel(self.dialog_parent)
+        dialog.title("Attività TIM")
+        dialog.geometry("760x420")
+        dialog.configure(bg=COLORS["background"])
+
+        header = tk.Frame(dialog, bg=COLORS["background"])
+        header.pack(fill="x", padx=16, pady=(12, 6))
+
+        data_str = data_ril.strftime("%d/%m/%Y") if hasattr(data_ril, "strftime") else str(data_ril)
+        titolo = f"{codice} - {nome} | {data_str}" if nome else f"{codice} | {data_str}"
+
+        tk.Label(
+            header,
+            text=titolo,
+            font=FONTS["big"],
+            bg=COLORS["background"],
+            fg=COLORS.get("text_dark", "#222"),
+        ).pack(anchor="w")
+
+        try:
+            tipi_attivita = fetch_tipi_attivita_tim()
+        except Exception as exc:
+            messagebox.showerror(
+                "Errore",
+                f"Impossibile recuperare i tipi attività da TIM:\n{exc}",
+                parent=dialog,
+            )
+            tipi_attivita = []
+
+        tipi_by_desc = {str(t.get("descrizione") or "").strip(): t.get("id") for t in tipi_attivita}
+        tipi_by_id = {t.get("id"): str(t.get("descrizione") or "").strip() for t in tipi_attivita}
+
+        editor_frame = tk.Frame(dialog, bg=COLORS["background"])
+        editor_frame.pack(fill="x", padx=16, pady=(0, 8))
+
+        tk.Label(
+            editor_frame,
+            text="Tipo attività:",
+            font=FONTS["label"],
+            bg=COLORS["background"],
+            fg=COLORS.get("text_dark", "#222"),
+        ).pack(side="left", padx=(0, 8))
+
+        tipo_var = tk.StringVar()
+        tipo_combo = ttk.Combobox(
+            editor_frame,
+            textvariable=tipo_var,
+            values=list(tipi_by_desc.keys()),
+            state="readonly" if tipi_by_desc else "disabled",
+            font=FONTS.get("input", FONTS.get("label")),
+            width=30,
+        )
+        tipo_combo.pack(side="left", padx=(0, 8))
+
+        table_frame = tk.Frame(
+            dialog,
+            bg=COLORS["white"],
+            highlightbackground=COLORS["border"],
+            highlightthickness=1,
+        )
+        table_frame.pack(fill="both", expand=True, padx=16, pady=(0, 12))
+
+        columns = ("attivita_id", "tipo_id", "attivita", "inizio", "fine", "ore")
+        tree = ttk.Treeview(table_frame, columns=columns, show="headings")
+
+        tree.heading("attivita_id", text="ID")
+        tree.heading("tipo_id", text="Tipo ID")
+        tree.heading("attivita", text="Attività")
+        tree.heading("inizio", text="Inizio")
+        tree.heading("fine", text="Fine")
+        tree.heading("ore", text="Ore")
+
+        tree.column("attivita_id", width=0, stretch=False)
+        tree.column("tipo_id", width=0, stretch=False)
+        tree.column("attivita", width=220, anchor="w")
+        tree.column("inizio", width=140, anchor="center")
+        tree.column("fine", width=140, anchor="center")
+        tree.column("ore", width=100, anchor="center")
+
+        vsb = ttk.Scrollbar(table_frame, orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=vsb.set)
+        tree.pack(side="left", fill="both", expand=True)
+        vsb.pack(side="right", fill="y")
+
+        def refresh_attivita_rows() -> None:
+            tree.delete(*tree.get_children())
+            if not attivita_rows:
+                tree.insert("", "end", values=("", "", "Nessuna attività trovata", "", "", ""))
+                return
+
+            for row in attivita_rows:
+                attivita_id = row.get("attivita_id")
+                tipo_id = row.get("tipo_attivita_id")
+                attivita = row.get("attivita") or ""
+                inizio = row.get("data_inizio")
+                fine = row.get("data_fine")
+                minuti = row.get("durata_minuti") or 0
+
+                inizio_str = inizio.strftime("%H:%M") if hasattr(inizio, "strftime") else str(inizio or "")
+                fine_str = fine.strftime("%H:%M") if hasattr(fine, "strftime") else str(fine or "")
+                ore_str = f"{float(minuti) / 60:.2f}" if minuti is not None else ""
+
+                tree.insert(
+                    "",
+                    "end",
+                    values=(attivita_id, tipo_id, attivita, inizio_str, fine_str, ore_str),
+                )
+
+        refresh_attivita_rows()
+
+        def on_tree_select(_event=None) -> None:
+            selection = tree.selection()
+            if not selection:
+                return
+            item = tree.item(selection[0])
+            values = item.get("values") or []
+            if len(values) < 2:
+                return
+            tipo_id = values[1]
+            tipo_desc = tipi_by_id.get(tipo_id)
+            if tipo_desc:
+                tipo_var.set(tipo_desc)
+
+        tree.bind("<<TreeviewSelect>>", on_tree_select)
+
+        def on_update_attivita() -> None:
+            selection = tree.selection()
+            if not selection:
+                messagebox.showwarning(
+                    "Selezione mancante",
+                    "Seleziona una riga da aggiornare.",
+                    parent=dialog,
+                )
+                return
+
+            new_desc = tipo_var.get().strip()
+            new_tipo_id = tipi_by_desc.get(new_desc)
+            if not new_tipo_id:
+                messagebox.showwarning(
+                    "Tipo non valido",
+                    "Seleziona un tipo attività valido.",
+                    parent=dialog,
+                )
+                return
+
+            item = tree.item(selection[0])
+            values = item.get("values") or []
+            if len(values) < 1:
+                return
+            attivita_id = values[0]
+            if not attivita_id:
+                return
+
+            try:
+                update_attivita_tim(int(attivita_id), int(new_tipo_id))
+                nonlocal_rows = fetch_attivita_tim(codice, data_ril)
+                attivita_rows.clear()
+                attivita_rows.extend(nonlocal_rows)
+                refresh_attivita_rows()
+                on_tree_select()
+            except Exception as exc:
+                messagebox.showerror(
+                    "Errore",
+                    f"Impossibile aggiornare l'attività:\n{exc}",
+                    parent=dialog,
+                )
+
+        create_button(
+            editor_frame,
+            text="Aggiorna",
+            command=on_update_attivita,
+            variant="primary",
+            width=12,
+        ).pack(side="left")
+
+        footer = tk.Frame(dialog, bg=COLORS["background"])
+        footer.pack(fill="x", padx=16, pady=(0, 12))
+
+        create_button(
+            footer,
+            text="Chiudi",
+            command=dialog.destroy,
+            variant="secondary",
+            width=12,
+        ).pack(side="right")
+
+    def _open_codici_gestionali_form(self, row_values: List[Any]) -> None:
+        try:
+            anomalia_id = int(row_values[0]) if row_values else None
+        except (TypeError, ValueError):
+            anomalia_id = None
+        dialog = tk.Toplevel(self.dialog_parent)
+        dialog.title("Codici Gestionali")
+        dialog.geometry("820x520")
+        dialog.configure(bg=COLORS["background"])
+
+        header = tk.Frame(dialog, bg=COLORS["background"])
+        header.pack(fill="x", padx=16, pady=(12, 6))
+
+        codice = row_values[4] if len(row_values) > 4 else ""
+        nome = row_values[5] if len(row_values) > 5 else ""
+
+        titolo = "Elenco Codici Gestionale"
+        if codice or nome:
+            titolo = f"{titolo}: {codice} {nome}".strip()
+
+        tk.Label(
+            header,
+            text=titolo,
+            font=FONTS["big"],
+            bg=COLORS["background"],
+            fg=COLORS.get("text_dark", "#222"),
+        ).pack(anchor="w")
+
+        search_frame = tk.Frame(dialog, bg=COLORS["background"])
+        search_frame.pack(fill="x", padx=16, pady=(0, 8))
+
+        tk.Label(
+            search_frame,
+            text="Nominativo:",
+            font=FONTS["label"],
+            bg=COLORS["background"],
+            fg=COLORS.get("text_dark", "#222"),
+        ).pack(side="left", padx=(0, 8))
+
+        search_var = tk.StringVar(value=str(nome or "").strip())
+        search_entry = ttk.Entry(search_frame, textvariable=search_var, width=32, font=FONTS["input"])
+        search_entry.pack(side="left", padx=(0, 8))
+
+        users: List[Dict[str, Any]] = []
+        user_display_map: Dict[str, int] = {}
+        current_user_id: List[Optional[int]] = [None]
+
+        table_frame = tk.Frame(
+            dialog,
+            bg=COLORS["white"],
+            highlightbackground=COLORS["border"],
+            highlightthickness=1,
+        )
+        table_frame.pack(fill="both", expand=True, padx=16, pady=(0, 12))
+
+        columns = ("record_id", "tipo_id", "descrizione", "attivita", "codice", "dal", "al", "reparto")
+        tree = ttk.Treeview(table_frame, columns=columns, show="headings")
+
+        tree.heading("record_id", text="ID")
+        tree.heading("tipo_id", text="Tipo ID")
+        tree.heading("descrizione", text="Descrizione")
+        tree.heading("attivita", text="Attività")
+        tree.heading("codice", text="Codice")
+        tree.heading("dal", text="Dal")
+        tree.heading("al", text="Al")
+        tree.heading("reparto", text="Reparto")
+
+        tree.column("record_id", width=0, stretch=False)
+        tree.column("tipo_id", width=0, stretch=False)
+        tree.column("descrizione", width=160, anchor="w")
+        tree.column("attivita", width=140, anchor="center")
+        tree.column("codice", width=120, anchor="center")
+        tree.column("dal", width=120, anchor="center")
+        tree.column("al", width=120, anchor="center")
+        tree.column("reparto", width=120, anchor="center")
+
+        vsb = ttk.Scrollbar(table_frame, orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=vsb.set)
+        tree.pack(side="left", fill="both", expand=True)
+        vsb.pack(side="right", fill="y")
+
+        def render_codici(rows: List[Dict[str, Any]]) -> None:
+            tree.delete(*tree.get_children())
+            if not rows:
+                tree.insert("", "end", values=("", "", "Nessun codice trovato", "", "", "", "", ""))
+                return
+            for row in rows:
+                record_id = row.get("record_id")
+                tipo_id = row.get("tipo_attivita_id")
+                descrizione = row.get("descrizione") or ""
+                attivita = row.get("attivita") or ""
+                cod = row.get("codice") or ""
+                dal = row.get("valido_dal")
+                al = row.get("valido_al")
+                reparto = row.get("reparto") or ""
+
+                dal_str = dal.strftime("%d/%m/%Y") if hasattr(dal, "strftime") else str(dal or "")
+                al_str = al.strftime("%d/%m/%Y") if hasattr(al, "strftime") else str(al or "")
+
+                tree.insert(
+                    "",
+                    "end",
+                    values=(record_id, tipo_id, descrizione, attivita, cod, dal_str, al_str, reparto),
+                )
+
+        def on_tree_select(_event=None) -> None:
+            selection = tree.selection()
+            if not selection:
+                return
+            item = tree.item(selection[0])
+            values = item.get("values") or []
+            if len(values) < 8:
+                return
+            record_id = values[0]
+            tipo_id = values[1]
+            descr = values[2]
+            att = values[3]
+            cod = values[4]
+            dal = values[5]
+            al = values[6]
+            rep = values[7]
+
+            selected_record_id[0] = int(record_id) if record_id else None
+            descr_var.set(str(descr or ""))
+            codice_var.set(str(cod or ""))
+            reparto_var.set(str(rep or ""))
+            dal_var.set(str(dal or ""))
+            al_var.set(str(al or ""))
+            no_end_var.set(not bool(al))
+            toggle_end_date()
+
+            tipo_desc = tipo_by_id.get(tipo_id) or str(att or "")
+            if tipo_desc:
+                attivita_var.set(tipo_desc)
+
+        tree.bind("<<TreeviewSelect>>", on_tree_select)
+
+        def parse_date(value: str) -> Optional[datetime.date]:
+            text = (value or "").strip()
+            if not text:
+                return None
+            try:
+                return datetime.datetime.strptime(text, "%d/%m/%Y").date()
+            except ValueError:
+                try:
+                    return datetime.datetime.strptime(text, "%Y-%m-%d").date()
+                except ValueError:
+                    return None
+
+        def collect_form_values() -> Optional[Dict[str, Any]]:
+            tipo_desc = attivita_var.get().strip()
+            tipo_id = tipo_by_desc.get(tipo_desc)
+            if not tipo_id:
+                messagebox.showwarning(
+                    "Dati mancanti",
+                    "Seleziona un'attività valida.",
+                    parent=dialog,
+                )
+                return None
+
+            codice_val = codice_var.get().strip()
+            if not codice_val:
+                messagebox.showwarning(
+                    "Dati mancanti",
+                    "Inserisci il codice.",
+                    parent=dialog,
+                )
+                return None
+
+            dal_date = parse_date(dal_var.get())
+            if not dal_date:
+                messagebox.showwarning(
+                    "Dati mancanti",
+                    "Inserisci una data di inizio valida.",
+                    parent=dialog,
+                )
+                return None
+
+            al_date = parse_date(al_var.get())
+
+            return {
+                "tipo_id": int(tipo_id),
+                "codice": codice_val,
+                "dal": dal_date,
+                "al": al_date,
+                "descrizione": descr_var.get().strip() or None,
+                "reparto": reparto_var.get().strip() or None,
+            }
+
+        def on_update() -> None:
+            if not selected_record_id[0]:
+                messagebox.showwarning(
+                    "Selezione mancante",
+                    "Seleziona un record da modificare.",
+                    parent=dialog,
+                )
+                return
+            payload = collect_form_values()
+            if not payload:
+                return
+            try:
+                update_codice_gestionale_tim(
+                    record_id=selected_record_id[0],
+                    tipo_attivita_id=payload["tipo_id"],
+                    codice=payload["codice"],
+                    valido_dal=payload["dal"],
+                    valido_al=payload["al"],
+                    descrizione=payload["descrizione"],
+                    reparto=payload["reparto"],
+                )
+            except Exception as exc:
+                messagebox.showerror(
+                    "Errore",
+                    f"Impossibile aggiornare il codice gestionale:\n{exc}",
+                    parent=dialog,
+                )
+                return
+            if current_user_id[0]:
+                load_codici_for_user(current_user_id[0])
+            try:
+                resolve_anomalie_codice_non_abbinato(str(codice), note="Codice gestionale assegnato")
+                self._load_anomalie()
+            except Exception:
+                pass
+
+        def on_insert() -> None:
+            if not current_user_id[0]:
+                messagebox.showwarning(
+                    "Utente mancante",
+                    "Seleziona un utente.",
+                    parent=dialog,
+                )
+                return
+            payload = collect_form_values()
+            if not payload:
+                return
+            try:
+                insert_codice_gestionale_tim(
+                    utente_id=current_user_id[0],
+                    tipo_attivita_id=payload["tipo_id"],
+                    codice=payload["codice"],
+                    valido_dal=payload["dal"],
+                    valido_al=payload["al"],
+                    descrizione=payload["descrizione"],
+                    reparto=payload["reparto"],
+                )
+            except Exception as exc:
+                messagebox.showerror(
+                    "Errore",
+                    f"Impossibile inserire il codice gestionale:\n{exc}",
+                    parent=dialog,
+                )
+                return
+            if current_user_id[0]:
+                load_codici_for_user(current_user_id[0])
+            clear_form()
+            try:
+                resolve_anomalie_codice_non_abbinato(str(codice), note="Codice gestionale assegnato")
+                self._load_anomalie()
+            except Exception:
+                pass
+
+        user_frame = tk.Frame(dialog, bg=COLORS["background"])
+        user_frame.pack(fill="x", padx=16, pady=(0, 8))
+
+        tk.Label(
+            user_frame,
+            text="Utente:",
+            font=FONTS["label"],
+            bg=COLORS["background"],
+            fg=COLORS.get("text_dark", "#222"),
+        ).pack(side="left", padx=(0, 8))
+
+        user_var = tk.StringVar()
+        user_combo = ttk.Combobox(
+            user_frame,
+            textvariable=user_var,
+            state="readonly",
+            font=FONTS["input"],
+            width=40,
+        )
+        user_combo.pack(side="left", padx=(0, 8))
+
+        edit_frame = tk.Frame(dialog, bg=COLORS["background"])
+        edit_frame.pack(fill="x", padx=16, pady=(0, 8))
+
+        tk.Label(
+            edit_frame,
+            text="Descrizione:",
+            font=FONTS["label"],
+            bg=COLORS["background"],
+        ).grid(row=0, column=0, sticky="w", padx=(0, 6), pady=4)
+
+        descr_var = tk.StringVar()
+        descr_entry = ttk.Entry(edit_frame, textvariable=descr_var, width=24, font=FONTS["input"])
+        descr_entry.grid(row=0, column=1, sticky="ew", padx=(0, 12), pady=4)
+
+        tk.Label(
+            edit_frame,
+            text="Attività:",
+            font=FONTS["label"],
+            bg=COLORS["background"],
+        ).grid(row=0, column=2, sticky="w", padx=(0, 6), pady=4)
+
+        try:
+            tipi_attivita = fetch_tipi_attivita_tim()
+        except Exception:
+            tipi_attivita = []
+
+        tipo_by_desc = {str(t.get("descrizione") or "").strip(): t.get("id") for t in tipi_attivita}
+        tipo_by_id = {t.get("id"): str(t.get("descrizione") or "").strip() for t in tipi_attivita}
+
+        attivita_var = tk.StringVar()
+        attivita_combo = ttk.Combobox(
+            edit_frame,
+            textvariable=attivita_var,
+            values=list(tipo_by_desc.keys()),
+            state="normal" if tipo_by_desc else "disabled",
+            font=FONTS["input"],
+            width=42,
+        )
+        attivita_combo.grid(row=0, column=3, sticky="ew", padx=(0, 12), pady=4)
+
+        attivita_values = list(tipo_by_desc.keys())
+
+        def _filter_attivita(_event=None) -> None:
+            text = attivita_var.get().strip().lower()
+            if not text:
+                attivita_combo["values"] = attivita_values
+                return
+            filtered = [v for v in attivita_values if v.lower().startswith(text)]
+            attivita_combo["values"] = filtered
+
+        attivita_combo.bind("<KeyRelease>", _filter_attivita)
+
+        tk.Label(
+            edit_frame,
+            text="Codice:",
+            font=FONTS["label"],
+            bg=COLORS["background"],
+        ).grid(row=1, column=0, sticky="w", padx=(0, 6), pady=4)
+
+        codice_var = tk.StringVar()
+        codice_entry = ttk.Entry(edit_frame, textvariable=codice_var, width=16, font=FONTS["input"])
+        codice_entry.grid(row=1, column=1, sticky="ew", padx=(0, 12), pady=4)
+
+        tk.Label(
+            edit_frame,
+            text="Dal:",
+            font=FONTS["label"],
+            bg=COLORS["background"],
+        ).grid(row=1, column=2, sticky="w", padx=(0, 6), pady=4)
+
+        dal_var = tk.StringVar()
+        dal_entry = DateEntry(edit_frame, textvariable=dal_var, font=FONTS["input"], date_pattern="dd/mm/yyyy", width=12)
+        dal_entry.grid(row=1, column=3, sticky="w", padx=(0, 12), pady=4)
+
+        tk.Label(
+            edit_frame,
+            text="Al:",
+            font=FONTS["label"],
+            bg=COLORS["background"],
+        ).grid(row=1, column=4, sticky="w", padx=(0, 6), pady=4)
+
+        al_var = tk.StringVar()
+        al_entry = DateEntry(edit_frame, textvariable=al_var, font=FONTS["input"], date_pattern="dd/mm/yyyy", width=12)
+        al_entry.grid(row=1, column=5, sticky="w", padx=(0, 12), pady=4)
+
+        no_end_var = tk.BooleanVar(value=False)
+
+        def toggle_end_date() -> None:
+            if no_end_var.get():
+                al_var.set("")
+                al_entry.configure(state="disabled")
+            else:
+                al_entry.configure(state="normal")
+
+        tk.Checkbutton(
+            edit_frame,
+            text="Senza fine",
+            variable=no_end_var,
+            command=toggle_end_date,
+            bg=COLORS["background"],
+        ).grid(row=1, column=6, sticky="w", padx=(0, 12), pady=4)
+
+        tk.Label(
+            edit_frame,
+            text="Reparto:",
+            font=FONTS["label"],
+            bg=COLORS["background"],
+        ).grid(row=1, column=7, sticky="w", padx=(0, 6), pady=4)
+
+        reparto_var = tk.StringVar()
+        reparto_entry = ttk.Entry(edit_frame, textvariable=reparto_var, width=14, font=FONTS["input"])
+        reparto_entry.grid(row=1, column=8, sticky="w", padx=(0, 12), pady=4)
+
+        edit_frame.grid_columnconfigure(1, weight=1)
+        edit_frame.grid_columnconfigure(3, weight=1)
+
+        selected_record_id: List[Optional[int]] = [None]
+
+        def clear_form() -> None:
+            selected_record_id[0] = None
+            descr_var.set("")
+            attivita_var.set("")
+            codice_var.set("")
+            dal_var.set("")
+            al_var.set("")
+            no_end_var.set(False)
+            toggle_end_date()
+            reparto_var.set("")
+
+        def load_codici_for_user(utente_id: int) -> None:
+            try:
+                codici = fetch_codici_gestionali_by_utente(int(utente_id))
+            except Exception as exc:
+                messagebox.showerror(
+                    "Errore",
+                    f"Impossibile recuperare i codici gestionali:\n{exc}",
+                    parent=dialog,
+                )
+                return
+            current_user_id[0] = int(utente_id)
+            render_codici(codici)
+
+        def on_user_selected(_event=None) -> None:
+            label = user_var.get().strip()
+            utente_id = user_display_map.get(label)
+            if utente_id:
+                load_codici_for_user(utente_id)
+
+        user_combo.bind("<<ComboboxSelected>>", on_user_selected)
+
+        def on_search() -> None:
+            nome_val = search_var.get().strip()
+            if not nome_val:
+                messagebox.showwarning(
+                    "Ricerca",
+                    "Inserisci un nominativo.",
+                    parent=dialog,
+                )
+                return
+            try:
+                nonlocal_users = search_utenti_tim(nome_val)
+            except Exception as exc:
+                messagebox.showerror(
+                    "Errore",
+                    f"Impossibile cercare il nominativo su TIM:\n{exc}",
+                    parent=dialog,
+                )
+                return
+
+            users.clear()
+            users.extend(nonlocal_users)
+            user_display_map.clear()
+
+            if not users:
+                render_codici([])
+                return
+
+            display_values: List[str] = []
+            for utente in users:
+                cognome = str(utente.get("cognome") or "").strip()
+                nome_u = str(utente.get("nome") or "").strip()
+                matricola = str(utente.get("matricola") or "").strip()
+                badge = str(utente.get("badge") or "").strip()
+                label = f"{cognome} {nome_u}".strip()
+                extra_parts: List[str] = []
+                if matricola:
+                    extra_parts.append(f"Matr: {matricola}")
+                if badge:
+                    extra_parts.append(f"Badge: {badge}")
+                if extra_parts:
+                    label = f"{label} ({' | '.join(extra_parts)})"
+                display_values.append(label)
+                user_display_map[label] = int(utente.get("id"))
+
+            user_combo["values"] = display_values
+            user_var.set(display_values[0])
+            load_codici_for_user(user_display_map[display_values[0]])
+
+        create_button(
+            search_frame,
+            text="Cerca",
+            command=on_search,
+            variant="primary",
+            width=12,
+        ).pack(side="left")
+
+        if search_var.get().strip():
+            on_search()
+
+        actions_frame = tk.Frame(dialog, bg=COLORS["background"])
+        actions_frame.pack(fill="x", padx=16, pady=(0, 8))
+
+        create_button(
+            actions_frame,
+            text="Modifica",
+            command=on_update,
+            variant="primary",
+            width=12,
+        ).pack(side="left", padx=6)
+
+        create_button(
+            actions_frame,
+            text="Nuovo",
+            command=on_insert,
+            variant="secondary",
+            width=12,
+        ).pack(side="left", padx=6)
+
+        create_button(
+            actions_frame,
+            text="Pulisci",
+            command=clear_form,
+            variant="secondary",
+            width=12,
+        ).pack(side="left", padx=6)
+
+        footer = tk.Frame(dialog, bg=COLORS["background"])
+        footer.pack(fill="x", padx=16, pady=(0, 12))
+
+        create_button(
+            footer,
+            text="Chiudi",
+            command=dialog.destroy,
+            variant="secondary",
+            width=12,
+        ).pack(side="right")
+
+    def _sort_by_column(self, col: str) -> None:
+        """Ordina la tabella client-side in base alla colonna selezionata."""
+        reverse = self._sort_reverse.get(col, False)
+        items = list(self.tree.get_children(""))
+
+        def sort_key(item_id: str):
+            value = self.tree.set(item_id, col)
+            return self._coerce_sort_value(value)
+
+        items.sort(key=sort_key, reverse=reverse)
+
+        for index, item_id in enumerate(items):
+            self.tree.move(item_id, "", index)
+
+        self._sort_reverse[col] = not reverse
+
+    @staticmethod
+    def _coerce_sort_value(value: Any) -> Any:
+        if value is None:
+            return (1, "")
+
+        if isinstance(value, (int, float, datetime.date, datetime.datetime)):
+            return (0, value)
+
+        text = str(value).strip()
+        if not text:
+            return (1, "")
+
+        # Date parsing
+        for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%Y-%m-%d %H:%M:%S"):
+            try:
+                return (0, datetime.datetime.strptime(text, fmt))
+            except ValueError:
+                pass
+
+        # Number parsing (supporta formati it/en)
+        normalized = text.replace(" ", "")
+        if re.match(r"^-?\d{1,3}(\.\d{3})*(,\d+)?$", normalized):
+            normalized = normalized.replace(".", "").replace(",", ".")
+        elif re.match(r"^-?\d+([\.,]\d+)?$", normalized):
+            normalized = normalized.replace(",", ".")
+
+        try:
+            return (0, float(normalized))
+        except ValueError:
+            return (0, text.lower())
 
     def _reset_filters(self) -> None:
         self.search_var.set("")
@@ -637,10 +1454,9 @@ class AnomalieView:
         if values:
             if not self.report_var.get() or self.report_var.get() not in values:
                 self.report_combo.current(0)
-            self.export_button.configure(state="normal")
         else:
             self.report_var.set("")
-            self.export_button.configure(state="disabled")
+        self.export_button.configure(state="normal")
 
     def _build_placeholder_values(self, filters: Dict[str, Any]) -> Dict[str, Any]:
         oggi = datetime.date.today()
@@ -889,27 +1705,54 @@ class AnomalieView:
             )
             return
 
-        anomalia_id = self.tree.item(selected[0])["values"][0]
+        anomalia_ids: List[int] = []
+        for item_id in selected:
+            values = self.tree.item(item_id).get("values") or []
+            if values:
+                try:
+                    anomalia_ids.append(int(values[0]))
+                except (TypeError, ValueError):
+                    continue
+
+        if not anomalia_ids:
+            messagebox.showwarning(
+                "Nessuna selezione",
+                "Seleziona un'anomalia dalla tabella.",
+                parent=self.dialog_parent,
+            )
+            return
+
+        if len(anomalia_ids) == 1:
+            confirm_text = f"Vuoi eliminare l'anomalia #{anomalia_ids[0]}?"
+        else:
+            confirm_text = f"Vuoi eliminare {len(anomalia_ids)} anomalie selezionate?"
+
         if not messagebox.askyesno(
             "Conferma eliminazione",
-            f"Vuoi eliminare l'anomalia #{anomalia_id}?",
+            confirm_text,
             parent=self.dialog_parent,
         ):
             return
 
         try:
-            delete_anomalia(int(anomalia_id))
+            for anomalia_id in anomalia_ids:
+                delete_anomalia(anomalia_id)
         except Exception as exc:
             messagebox.showerror(
                 "Errore",
-                f"Impossibile eliminare l'anomalia:\n{exc}",
+                f"Impossibile eliminare le anomalie:\n{exc}",
                 parent=self.dialog_parent,
             )
             return
 
+        if len(anomalia_ids) == 1:
+            success_text = f"Anomalia #{anomalia_ids[0]} eliminata."
+        else:
+            success_text = f"Eliminate {len(anomalia_ids)} anomalie."
+
         messagebox.showinfo(
             "Eliminazione completata",
-            f"Anomalia #{anomalia_id} eliminata.",
+            success_text,
             parent=self.dialog_parent,
         )
         self._load_anomalie()

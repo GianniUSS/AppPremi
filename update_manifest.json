@@ -1,15 +1,14 @@
 {
-    "latest_version": "1.2.6",
-    "release_date": "2026-01-20",
+    "latest_version": "1.2.7",
+    "release_date": "2026-01-27",
     "release_notes": [
-        "Update: sostituzione automatica del vecchio exe alla chiusura",
-        "UI: mostra la versione reale nel menu",
-        "Controllo aggiornamenti all'avvio",
-        "Export premi: dopo il salvataggio chiede di aprire la cartella di destinazione",
-        "Build: icona exe aggiornata e nome onefile allineato"
+        "Anomalie: ordinamento colonne e selezione multipla",
+        "Anomalie: dettaglio attività TIM e gestione codici gestionali",
+        "Anomalie: export sempre visibile e nuovi filtri",
+        "Export HR: file unico con 4 attività"
     ],
-    "download_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.6/GestionePremi.exe",
-    "sha256": "861D1019287559E6D5E098CCD9C18830D9868648A6500FB7112FE5A0DB44196B",
+    "download_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.7/GestionePremi.exe",
+    "sha256": "",
     "file_name": "GestionePremi.exe",
-    "icons_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.6/icons-v1.2.6.zip"
+    "icons_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.7/icons-v1.2.7.zip"
 }
