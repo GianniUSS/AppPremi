@@ -37,16 +37,22 @@ REM Crea script di installazione che viene incluso nell'archivio
     echo set "TARGET=%%LOCALAPPDATA%%\AppEden\GestionePremi"
     echo.
     echo REM Chiudi eventuale istanza in esecuzione
+    echo echo Chiusura applicazione in corso...
     echo taskkill /F /IM GestionePremi.exe 2^>nul
-    echo timeout /t 2 /nobreak ^>nul
+    echo timeout /t 3 /nobreak ^>nul
     echo.
-    echo REM Rimuovi vecchia installazione e copia i nuovi file
-    echo if exist "%%TARGET%%" rmdir /s /q "%%TARGET%%"
-    echo mkdir "%%TARGET%%"
+    echo REM Rimuovi vecchia installazione
+    echo if exist "%%TARGET%%" rmdir /s /q "%%TARGET%%" 2^>nul
+    echo timeout /t 1 /nobreak ^>nul
+    echo mkdir "%%TARGET%%" 2^>nul
+    echo.
+    echo REM Copia i nuovi file dalla cartella temp dove 7z ha estratto
+    echo echo Installazione in corso...
     echo xcopy /E /I /Y "%%~dp0*" "%%TARGET%%\" ^>nul
     echo del "%%TARGET%%\install.cmd" 2^>nul
     echo.
     echo REM Avvia la nuova versione
+    echo echo Avvio applicazione...
     echo start "" "%%TARGET%%\GestionePremi.exe"
     echo endlocal
 ) > "%SOURCE_DIR%\install.cmd"
@@ -55,10 +61,12 @@ REM Crea archivio 7z con tutto il contenuto + install.cmd
 if exist "%SFX_ARCHIVE%" del /f "%SFX_ARCHIVE%"
 "%SEVEN_ZIP%" a -t7z -mx=5 "%SFX_ARCHIVE%" "%SOURCE_DIR%\*" >nul
 
-REM Configurazione SFX - estrae in temp ed esegue install.cmd
+REM Configurazione SFX - estrae in cartella TEMP, poi esegue install.cmd
 (
     echo ;!@Install@!UTF-8!
     echo Title="Installazione %APP_NAME%"
+    echo BeginPrompt="Vuoi installare %APP_NAME%?"
+    echo InstallPath="%%T\\%APP_NAME%_setup"
     echo RunProgram="install.cmd"
     echo ;!@InstallEnd@!
 ) > "%SFX_CONFIG%"

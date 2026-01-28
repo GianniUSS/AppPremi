@@ -1,17 +1,13 @@
 {
-    "latest_version": "1.2.14",
+    "latest_version": "1.2.15",
     "release_date": "2026-01-28",
     "release_notes": [
-        "Fix: installer SFX con gestione automatica chiusura app",
-        "Fix: xcopy per copia file nell'aggiornamento",
-        "Anomalie: ordinamento colonne e selezione multipla",
-        "Anomalie: dettaglio attività TIM e gestione codici gestionali",
-        "Anomalie: export sempre visibile e nuovi filtri",
-        "Export HR: file unico con 4 attività",
-        "Aggiornamento: riavvio automatico alla chiusura"
+        "Fix: SFX estrae in cartella TEMP per evitare conflitti con file in uso",
+        "Fix: installer con prompt di conferma",
+        "Fix: gestione automatica chiusura app precedente"
     ],
-    "download_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.14/GestionePremi.exe",
-    "sha256": "38975B0B5C16AEE1C48B6FCBAEEB0932B6765BA2196A0127DE333BB72B7F6C7D",
+    "download_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.15/GestionePremi.exe",
+    "sha256": "D1D495BAAA1E7A1374EA247CC0B91688AC45922D10434DF5B14FBD0135693D01",
     "file_name": "GestionePremi.exe",
     "icons_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.7/icons-v1.2.7.zip"
 }
