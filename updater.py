@@ -10,6 +10,7 @@ import subprocess
 import sys
 import threading
 import tkinter as tk
+import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 from tkinter import messagebox, ttk
@@ -173,6 +174,8 @@ class UpdateDialog(tk.Toplevel):
         self._manifest: Optional[UpdateInfo] = None
         self._download_path: Optional[Path] = None
         self._app_copy_path: Optional[Path] = None
+        self._extracted_dir: Optional[Path] = None
+        self._launch_path: Optional[Path] = None
         self._auto_replace_active = False
 
         # UI elements
@@ -257,6 +260,8 @@ class UpdateDialog(tk.Toplevel):
         assert self._manifest is not None
         info = self._manifest
         self._app_copy_path = None
+        self._extracted_dir = None
+        self._launch_path = None
 
         try:
             _DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -277,7 +282,25 @@ class UpdateDialog(tk.Toplevel):
                 if computed.lower() != info.sha256.lower():
                     raise ValueError("Checksum SHA256 non corrispondente")
 
-            self._app_copy_path = _copy_to_app_directory(destination, info.file_name)
+            if destination.suffix.lower() == ".zip":
+                extract_dir = _DOWNLOAD_DIR / f"{destination.stem}_{info.version}"
+                if extract_dir.exists():
+                    shutil.rmtree(extract_dir, ignore_errors=True)
+                extract_dir.mkdir(parents=True, exist_ok=True)
+                with zipfile.ZipFile(destination, "r") as zip_ref:
+                    zip_ref.extractall(extract_dir)
+
+                exe_path = extract_dir / "GestionePremi" / "GestionePremi.exe"
+                if not exe_path.exists():
+                    exe_path = extract_dir / "GestionePremi.exe"
+                if not exe_path.exists():
+                    raise FileNotFoundError("Eseguibile non trovato nel pacchetto aggiornamento")
+
+                self._extracted_dir = extract_dir
+                self._launch_path = exe_path
+            else:
+                self._app_copy_path = _copy_to_app_directory(destination, info.file_name)
+                self._launch_path = self._app_copy_path or destination
 
         except Exception as exc:
             self._set_status(f"Errore durante il download: {exc}")
@@ -338,7 +361,12 @@ class UpdateDialog(tk.Toplevel):
             "Chiudi l'applicazione corrente: la nuova versione verrà avviata automaticamente."
         )
 
-        if self._app_copy_path:
+        if self._extracted_dir:
+            message += (
+                "\n\n"
+                f"Pacchetto estratto in:\n{self._extracted_dir}"
+            )
+        elif self._app_copy_path:
             message += (
                 "\n\n"
                 f"Una copia è stata salvata anche accanto all'applicazione in:\n{self._app_copy_path}\n"
@@ -351,7 +379,7 @@ class UpdateDialog(tk.Toplevel):
         if not self._download_path:
             return
 
-        new_path = self._app_copy_path or self._download_path
+        new_path = self._launch_path or self._app_copy_path or self._download_path
         if not new_path:
             return
 
@@ -421,7 +449,9 @@ class UpdateDialog(tk.Toplevel):
         self.destroy()
 
     def _open_download_folder(self) -> None:
-        if not self._download_path:
+        if self._extracted_dir and self._extracted_dir.exists():
+            target = self._extracted_dir
+        elif not self._download_path:
             _DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
             target = _DOWNLOAD_DIR
         else:

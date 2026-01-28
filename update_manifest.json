@@ -1,5 +1,5 @@
 {
-    "latest_version": "1.2.11",
+    "latest_version": "1.2.12",
     "release_date": "2026-01-28",
     "release_notes": [
         "Anomalie: ordinamento colonne e selezione multipla",
@@ -10,10 +10,11 @@
         "Anomalie: rimosso pulsante Riapri",
         "Build: runtime VC inclusi",
         "Fix: estrazione onefile in cartella temporanea dedicata",
-        "Fix: cartella temporanea relativa e portabile"
+        "Fix: cartella temporanea relativa e portabile",
+        "Update: pacchetto zip onedir (no estrazione onefile)"
     ],
-    "download_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.11/GestionePremi.exe",
-    "sha256": "50F5DDB0172DE97D0B8FDF1D17D0B7809CF637F10434E5D624EC7938A6D6AF0F",
-    "file_name": "GestionePremi.exe",
+    "download_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.12/GestionePremi.zip",
+    "sha256": "45C6E6BAE03FE68638F8ACD1F813822B6929CA34A2A387D7D09A183CE980D6F1",
+    "file_name": "GestionePremi.zip",
     "icons_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.7/icons-v1.2.7.zip"
 }
