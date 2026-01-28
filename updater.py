@@ -177,6 +177,7 @@ class UpdateDialog(tk.Toplevel):
         self._extracted_dir: Optional[Path] = None
         self._launch_path: Optional[Path] = None
         self._auto_replace_active = False
+        self._is_sfx = False
 
         # UI elements
         self.status_var = tk.StringVar(value="Ricerca aggiornamenti in corso...")
@@ -282,7 +283,13 @@ class UpdateDialog(tk.Toplevel):
                 if computed.lower() != info.sha256.lower():
                     raise ValueError("Checksum SHA256 non corrispondente")
 
-            if destination.suffix.lower() == ".zip":
+            # Gestione file exe (SFX autoestraente)
+            if destination.suffix.lower() == ".exe":
+                # L'SFX si occupa di tutto: estrae, chiude la vecchia app e avvia la nuova
+                self._launch_path = destination
+                self._is_sfx = True
+
+            elif destination.suffix.lower() == ".zip":
                 extract_dir = _DOWNLOAD_DIR / f"{destination.stem}_{info.version}"
                 if extract_dir.exists():
                     shutil.rmtree(extract_dir, ignore_errors=True)
@@ -315,6 +322,20 @@ class UpdateDialog(tk.Toplevel):
             return
 
         self.progress.config(value=100, maximum=100, mode="determinate")
+
+        # Caso SFX: messaggio semplice con istruzioni
+        if self._is_sfx:
+            message = (
+                f"Aggiornamento scaricato:\n{self._download_path}\n\n"
+                "Premi 'Installa' per avviare l'installazione.\n"
+                "L'applicazione verrà chiusa e aggiornata automaticamente."
+            )
+            self._set_status(message)
+            self.open_folder_button.config(state="normal")
+            
+            # Mostra pulsante "Installa" invece del comportamento precedente
+            self.install_button.config(text="Installa", state="normal", command=self._run_sfx_installer)
+            return
 
         auto_replace_note = ""
         if self._app_copy_path and self._app_copy_path.name.endswith("_nuovo" + self._app_copy_path.suffix):
@@ -374,6 +395,23 @@ class UpdateDialog(tk.Toplevel):
             )
         self._set_status(message + auto_replace_note)
         self.open_folder_button.config(state="normal")
+
+    def _run_sfx_installer(self) -> None:
+        """Esegue l'installer SFX e chiude l'applicazione."""
+        if not self._launch_path or not self._launch_path.exists():
+            messagebox.showerror("Errore", "File di aggiornamento non trovato.")
+            return
+
+        try:
+            # Lancia l'SFX in un processo separato
+            subprocess.Popen([str(self._launch_path)], creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+            
+            # Chiudi l'applicazione corrente
+            self.master.after(500, self.master.destroy)
+            self.destroy()
+            os._exit(0)
+        except Exception as exc:
+            messagebox.showerror("Errore", f"Impossibile avviare l'installer:\n{exc}")
 
     def _schedule_restart_after_exit(self) -> None:
         if not self._download_path:
