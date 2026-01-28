@@ -421,7 +421,6 @@ class UpdateDialog(tk.Toplevel):
         if not new_path:
             return
 
-        old_path = Path(sys.executable).resolve() if getattr(sys, "frozen", False) else None
         pid = os.getpid()
 
         try:
@@ -432,14 +431,13 @@ class UpdateDialog(tk.Toplevel):
         batch_dir = _DOWNLOAD_DIR if _DOWNLOAD_DIR.exists() else new_path.parent
         batch_path = batch_dir / "update_restart.bat"
 
-        old_path_str = str(old_path) if old_path else ""
         new_path_str = str(new_path)
 
+        # Per ZIP estratti, avvia direttamente il nuovo exe senza spostare nulla
         batch_path.write_text(
             "@echo off\n"
             "setlocal\n"
             f"set \"pid={pid}\"\n"
-            f"set \"old={old_path_str}\"\n"
             f"set \"new={new_path_str}\"\n"
             ":wait\n"
             "tasklist /FI \"PID eq %pid%\" | find \"%pid%\" >nul\n"
@@ -447,20 +445,8 @@ class UpdateDialog(tk.Toplevel):
             "  timeout /t 1 /nobreak >nul\n"
             "  goto wait\n"
             ")\n"
-            "set \"moved=0\"\n"
-            "if exist \"%new%\" (\n"
-            "  if /I not \"%new%\"==\"%old%\" (\n"
-            "    move /y \"%new%\" \"%old%\" >nul\n"
-            "    if not errorlevel 1 set \"moved=1\"\n"
-            "  ) else (\n"
-            "    set \"moved=1\"\n"
-            "  )\n"
-            ")\n"
-            "if \"%moved%\"==\"1\" (\n"
-            "  if exist \"%old%\" start \"\" \"%old%\"\n"
-            ") else (\n"
-            "  if exist \"%new%\" start \"\" \"%new%\"\n"
-            ")\n"
+            "timeout /t 1 /nobreak >nul\n"
+            "if exist \"%new%\" start \"\" \"%new%\"\n"
             "del \"%~f0\"\n",
             encoding="utf-8",
         )

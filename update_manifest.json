@@ -1,12 +1,12 @@
 {
-    "latest_version": "1.2.16",
+    "latest_version": "1.2.17",
     "release_date": "2026-01-28",
     "release_notes": [
-        "Fix: tornato a formato ZIP per compatibilità con updater esistenti",
-        "Nuovo updater con supporto SFX per versioni future"
+        "Fix: riavvio automatico dopo aggiornamento ZIP",
+        "Semplificato script di riavvio post-update"
     ],
-    "download_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.16/GestionePremi.zip",
-    "sha256": "78633021C8629055FB29C9FE57EEE0496EAA73E677E4E8E8136053EC11714D70",
+    "download_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.17/GestionePremi.zip",
+    "sha256": "D0821CFC0278A27FBB2B78A457B27B1FACB51F0CBA4E4613F6237289C2B74460",
     "file_name": "GestionePremi.zip",
     "icons_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.7/icons-v1.2.7.zip"
 }
