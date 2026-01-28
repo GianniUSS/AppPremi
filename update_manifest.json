@@ -1,13 +1,12 @@
 {
-    "latest_version": "1.2.15",
+    "latest_version": "1.2.16",
     "release_date": "2026-01-28",
     "release_notes": [
-        "Fix: SFX estrae in cartella TEMP per evitare conflitti con file in uso",
-        "Fix: installer con prompt di conferma",
-        "Fix: gestione automatica chiusura app precedente"
+        "Fix: tornato a formato ZIP per compatibilità con updater esistenti",
+        "Nuovo updater con supporto SFX per versioni future"
     ],
-    "download_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.15/GestionePremi.exe",
-    "sha256": "D1D495BAAA1E7A1374EA247CC0B91688AC45922D10434DF5B14FBD0135693D01",
-    "file_name": "GestionePremi.exe",
+    "download_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.16/GestionePremi.zip",
+    "sha256": "78633021C8629055FB29C9FE57EEE0496EAA73E677E4E8E8136053EC11714D70",
+    "file_name": "GestionePremi.zip",
     "icons_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.7/icons-v1.2.7.zip"
 }
