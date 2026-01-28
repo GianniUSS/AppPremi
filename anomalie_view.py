@@ -389,14 +389,6 @@ class AnomalieView:
 
         create_button(
             actions_frame,
-            text="⟲ Riapri",
-            command=lambda: self._change_stato("APERTA"),
-            variant="primary",
-            width=12,
-        ).pack(side="left", padx=4)
-
-        create_button(
-            actions_frame,
             text="🗑️ Elimina",
             command=self._delete_anomalia,
             variant="danger",

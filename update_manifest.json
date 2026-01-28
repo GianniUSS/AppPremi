@@ -1,15 +1,17 @@
 {
-    "latest_version": "1.2.8",
-    "release_date": "2026-01-27",
+    "latest_version": "1.2.9",
+    "release_date": "2026-01-28",
     "release_notes": [
         "Anomalie: ordinamento colonne e selezione multipla",
         "Anomalie: dettaglio attività TIM e gestione codici gestionali",
         "Anomalie: export sempre visibile e nuovi filtri",
         "Export HR: file unico con 4 attività",
-        "Aggiornamento: riavvio automatico alla chiusura"
+        "Aggiornamento: riavvio automatico alla chiusura",
+        "Anomalie: rimosso pulsante Riapri",
+        "Build: runtime VC inclusi"
     ],
-    "download_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.8/GestionePremi.exe",
-    "sha256": "87F7924D9C104EF72BAAC4C61DE4795F98CBA686C8BD291E9EB41C4BC728868B",
+    "download_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.9/GestionePremi.exe",
+    "sha256": "479270C140BD9B84A15ABA18111D0939CFFCEC48ED76A894C8C357800F6D1BA7",
     "file_name": "GestionePremi.exe",
     "icons_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.7/icons-v1.2.7.zip"
 }
