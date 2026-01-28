@@ -16,7 +16,7 @@ set ADD_PYDLL=
 set PYTHON_DLL_TMP=%TEMP%\pythondll.txt
 set VCRUNTIME_DLL_TMP=%TEMP%\vcruntimedlls.txt
 set ADD_VCRUNTIME=
-set RUNTIME_TMPDIR=%LOCALAPPDATA%\AppEdenTemp
+set RUNTIME_TMPDIR=AppEdenTemp
 
 if exist "%PYTHON_DLL_TMP%" del /f "%PYTHON_DLL_TMP%"
 "%PYTHON_BIN%" -c "import sys, os; print(os.path.join(sys.base_prefix, 'python{}{}.dll'.format(sys.version_info[0], sys.version_info[1])))" > "%PYTHON_DLL_TMP%"
