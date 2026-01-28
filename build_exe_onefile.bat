@@ -16,6 +16,7 @@ set ADD_PYDLL=
 set PYTHON_DLL_TMP=%TEMP%\pythondll.txt
 set VCRUNTIME_DLL_TMP=%TEMP%\vcruntimedlls.txt
 set ADD_VCRUNTIME=
+set RUNTIME_TMPDIR=%LOCALAPPDATA%\AppEdenTemp
 
 if exist "%PYTHON_DLL_TMP%" del /f "%PYTHON_DLL_TMP%"
 "%PYTHON_BIN%" -c "import sys, os; print(os.path.join(sys.base_prefix, 'python{}{}.dll'.format(sys.version_info[0], sys.version_info[1])))" > "%PYTHON_DLL_TMP%"
@@ -60,6 +61,7 @@ if exist %APP_NAME_ONEFILE%.spec (
 
 echo [INFO] Avvio PyInstaller ONEFILE (tramite python -m PyInstaller)...
 call "%PYTHON_BIN%" -m %PYINSTALLER_MODULE% --onefile --noconsole --clean --name %APP_NAME_ONEFILE% "%MAIN_SCRIPT%" ^
+    --runtime-tmpdir "%RUNTIME_TMPDIR%" ^
     --icon "assets\app_icon.ico" ^
     --collect-submodules mysql.connector.plugins ^
     --add-binary "%MYSQL_PLUGIN_SRC%";%MYSQL_PLUGIN_DST% ^
