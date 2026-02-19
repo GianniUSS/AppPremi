@@ -451,6 +451,7 @@ class UpdateDialog(tk.Toplevel):
             app_dir_str = str(app_dir)
             app_exe = app_dir / "GestionePremi.exe"
             app_exe_str = str(app_exe)
+            log_path_str = str(batch_dir / "update_log.txt")
             
             # Script che copia i file aggiornati nella cartella originale
             batch_path.write_text(
@@ -460,17 +461,28 @@ class UpdateDialog(tk.Toplevel):
                 f"set \"source={source_dir_str}\"\n"
                 f"set \"target={app_dir_str}\"\n"
                 f"set \"app={app_exe_str}\"\n"
+                f"set \"log={log_path_str}\"\n"
+                "echo [%date% %time%] Avvio aggiornamento > \"%log%\"\n"
+                "echo Attendo chiusura applicazione...\n"
+                "echo [%date% %time%] Attendo PID %pid% >> \"%log%\"\n"
                 ":wait\n"
-                "tasklist /FI \"PID eq %pid%\" | find \"%pid%\" >nul\n"
+                "tasklist /FI \"IMAGENAME eq GestionePremi.exe\" 2>nul | find /I \"GestionePremi.exe\" >nul\n"
                 "if not errorlevel 1 (\n"
-                "  timeout /t 1 /nobreak >nul\n"
+                "  timeout /t 2 /nobreak >nul\n"
                 "  goto wait\n"
                 ")\n"
-                "timeout /t 2 /nobreak >nul\n"
+                "echo [%date% %time%] App chiusa, attendo 3 secondi >> \"%log%\"\n"
+                "timeout /t 3 /nobreak >nul\n"
                 "echo Aggiornamento in corso...\n"
-                "xcopy /E /Y /I \"%source%\\*\" \"%target%\\\" >nul 2>&1\n"
+                "echo [%date% %time%] Copia da: %source% >> \"%log%\"\n"
+                "echo [%date% %time%] Copia in: %target% >> \"%log%\"\n"
+                "xcopy /E /Y \"%source%\\*\" \"%target%\\\" >> \"%log%\" 2>&1\n"
+                "echo [%date% %time%] xcopy exit code: %errorlevel% >> \"%log%\"\n"
                 "if exist \"%app%\" (\n"
+                "  echo [%date% %time%] Avvio %app% >> \"%log%\"\n"
                 "  start \"\" \"%app%\"\n"
+                ") else (\n"
+                "  echo [%date% %time%] ERRORE: %app% non trovato >> \"%log%\"\n"
                 ")\n"
                 "del \"%~f0\"\n",
                 encoding="utf-8",
@@ -494,7 +506,7 @@ class UpdateDialog(tk.Toplevel):
                 encoding="utf-8",
             )
 
-        subprocess.Popen(["cmd", "/c", str(batch_path)], creationflags=subprocess.CREATE_NO_WINDOW)
+        subprocess.Popen(["cmd", "/c", str(batch_path)])
 
     def _on_close_clicked(self) -> None:
         if self._download_path and self._download_path.exists():
