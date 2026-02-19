@@ -1,11 +1,11 @@
 {
-    "latest_version": "1.2.20",
+    "latest_version": "1.2.21",
     "release_date": "2026-02-19",
     "release_notes": [
-        "Fix: aggiornamento ora copia i file nella cartella originale dell'app"
+        "Test aggiornamento automatico nella cartella app"
     ],
-    "download_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.20/GestionePremi.zip",
-    "sha256": "FA0DE702A02BBD57D24CA6C732F124043BB214D15D1454BBA394C3F010F6559C",
+    "download_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.21/GestionePremi.zip",
+    "sha256": "7AC0858E2768B9A3D169677DE1090EAEBB8C6575CE5371C8CB7A42420CD2380F",
     "file_name": "GestionePremi.zip",
     "icons_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.7/icons-v1.2.7.zip"
 }
