@@ -379,10 +379,16 @@ class UpdateDialog(tk.Toplevel):
 
         message = (
             f"Aggiornamento scaricato correttamente in:\n{self._download_path}\n\n"
-            "Chiudi l'applicazione corrente: la nuova versione verrà avviata automaticamente."
+            "Chiudi l'applicazione corrente: i file verranno aggiornati e l'app riavviata automaticamente."
         )
 
-        if self._extracted_dir:
+        app_dir = _get_app_directory()
+        if self._extracted_dir and app_dir:
+            message += (
+                "\n\n"
+                f"I file verranno copiati in:\n{app_dir}"
+            )
+        elif self._extracted_dir:
             message += (
                 "\n\n"
                 f"Pacchetto estratto in:\n{self._extracted_dir}"
@@ -422,6 +428,7 @@ class UpdateDialog(tk.Toplevel):
             return
 
         pid = os.getpid()
+        app_dir = _get_app_directory()
 
         try:
             _DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -433,23 +440,59 @@ class UpdateDialog(tk.Toplevel):
 
         new_path_str = str(new_path)
 
-        # Per ZIP estratti, avvia direttamente il nuovo exe senza spostare nulla
-        batch_path.write_text(
-            "@echo off\n"
-            "setlocal\n"
-            f"set \"pid={pid}\"\n"
-            f"set \"new={new_path_str}\"\n"
-            ":wait\n"
-            "tasklist /FI \"PID eq %pid%\" | find \"%pid%\" >nul\n"
-            "if not errorlevel 1 (\n"
-            "  timeout /t 1 /nobreak >nul\n"
-            "  goto wait\n"
-            ")\n"
-            "timeout /t 1 /nobreak >nul\n"
-            "if exist \"%new%\" start \"\" \"%new%\"\n"
-            "del \"%~f0\"\n",
-            encoding="utf-8",
-        )
+        # Se abbiamo una cartella estratta e una cartella app, copia i file aggiornati
+        if self._extracted_dir and app_dir:
+            # La cartella sorgente è GestionePremi dentro la cartella estratta
+            source_dir = self._extracted_dir / "GestionePremi"
+            if not source_dir.exists():
+                source_dir = self._extracted_dir
+            
+            source_dir_str = str(source_dir)
+            app_dir_str = str(app_dir)
+            app_exe = app_dir / "GestionePremi.exe"
+            app_exe_str = str(app_exe)
+            
+            # Script che copia i file aggiornati nella cartella originale
+            batch_path.write_text(
+                "@echo off\n"
+                "setlocal\n"
+                f"set \"pid={pid}\"\n"
+                f"set \"source={source_dir_str}\"\n"
+                f"set \"target={app_dir_str}\"\n"
+                f"set \"app={app_exe_str}\"\n"
+                ":wait\n"
+                "tasklist /FI \"PID eq %pid%\" | find \"%pid%\" >nul\n"
+                "if not errorlevel 1 (\n"
+                "  timeout /t 1 /nobreak >nul\n"
+                "  goto wait\n"
+                ")\n"
+                "timeout /t 2 /nobreak >nul\n"
+                "echo Aggiornamento in corso...\n"
+                "xcopy /E /Y /I \"%source%\\*\" \"%target%\\\" >nul 2>&1\n"
+                "if exist \"%app%\" (\n"
+                "  start \"\" \"%app%\"\n"
+                ")\n"
+                "del \"%~f0\"\n",
+                encoding="utf-8",
+            )
+        else:
+            # Fallback: avvia direttamente il nuovo exe senza copiare
+            batch_path.write_text(
+                "@echo off\n"
+                "setlocal\n"
+                f"set \"pid={pid}\"\n"
+                f"set \"new={new_path_str}\"\n"
+                ":wait\n"
+                "tasklist /FI \"PID eq %pid%\" | find \"%pid%\" >nul\n"
+                "if not errorlevel 1 (\n"
+                "  timeout /t 1 /nobreak >nul\n"
+                "  goto wait\n"
+                ")\n"
+                "timeout /t 1 /nobreak >nul\n"
+                "if exist \"%new%\" start \"\" \"%new%\"\n"
+                "del \"%~f0\"\n",
+                encoding="utf-8",
+            )
 
         subprocess.Popen(["cmd", "/c", str(batch_path)], creationflags=subprocess.CREATE_NO_WINDOW)
 
