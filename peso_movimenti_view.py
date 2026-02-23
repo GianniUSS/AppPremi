@@ -177,9 +177,9 @@ class PesoMovimentiView(ttk.Frame):
         return PesoMovimento(
             id=int(item_id),
             tipo_attivita=str(values[0]),
-            tipo=str(values[0]),
-            peso=Decimal(str(values[1])),
-            note=str(values[2]) if values[2] else None,
+            tipo=str(values[1]),
+            peso=Decimal(str(values[2])),
+            note=str(values[3]) if values[3] else None,
         )
 
     def _on_add(self) -> None:

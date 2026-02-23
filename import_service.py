@@ -12,6 +12,7 @@ from tkinter import ttk
 from database import (
     ensure_table_and_indexes,
     insert_batch_data,
+    delete_records_by_period,
     update_penalita_picking,
     get_penalita_picking_from_sessioni,
 )
@@ -76,6 +77,21 @@ class ImportService:
 
             # Preparazione dati
             values = prepare_dataframe_for_db(df_grouped)
+
+            # Pulizia record esistenti per lo stesso periodo/tipo prima del re-import
+            elapsed = time.time() - start_time
+            self._update_status(f"Pulizia record esistenti... ({elapsed:.1f}s)", 50, progress_var, status_label, root)
+            tipo_attivita = str(df_grouped["tipo_attivita"].iloc[0]) if "tipo_attivita" in df_grouped.columns else ""
+            date_serie = df_grouped["data"]
+            # Ricava mese e anno da tutte le date presenti nel file
+            import pandas as pd
+            date_parsed = pd.to_datetime(date_serie, errors="coerce").dropna()
+            periodi = set((d.year, d.month) for d in date_parsed)
+            deleted_total = 0
+            for anno_p, mese_p in periodi:
+                deleted_total += delete_records_by_period(anno_p, mese_p, tipo_attivita)
+            if deleted_total > 0:
+                print(f"[OK] Eliminati {deleted_total} record precedenti prima del re-import")
 
             # Inserimento in database
             elapsed = time.time() - start_time

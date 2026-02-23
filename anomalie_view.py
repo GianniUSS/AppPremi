@@ -26,6 +26,8 @@ from database import (
     update_anomalia_stato,
     update_attivita_tim,
     update_codice_gestionale_tim,
+    split_attivita_tim,
+    split_attivita_tim_multiplo,
 )
 from ui_components import create_button
 
@@ -455,15 +457,15 @@ class AnomalieView:
 
         dialog = tk.Toplevel(self.dialog_parent)
         dialog.title("Attività TIM")
-        dialog.geometry("760x420")
+        dialog.geometry("920x540")
         dialog.configure(bg=COLORS["background"])
-
-        header = tk.Frame(dialog, bg=COLORS["background"])
-        header.pack(fill="x", padx=16, pady=(12, 6))
 
         data_str = data_ril.strftime("%d/%m/%Y") if hasattr(data_ril, "strftime") else str(data_ril)
         titolo = f"{codice} - {nome} | {data_str}" if nome else f"{codice} | {data_str}"
 
+        # --- Header ---
+        header = tk.Frame(dialog, bg=COLORS["background"])
+        header.pack(fill="x", padx=16, pady=(12, 4))
         tk.Label(
             header,
             text=titolo,
@@ -485,8 +487,88 @@ class AnomalieView:
         tipi_by_desc = {str(t.get("descrizione") or "").strip(): t.get("id") for t in tipi_attivita}
         tipi_by_id = {t.get("id"): str(t.get("descrizione") or "").strip() for t in tipi_attivita}
 
+        # --- Tabella attività ---
+        table_frame = tk.Frame(
+            dialog,
+            bg=COLORS["white"],
+            highlightbackground=COLORS["border"],
+            highlightthickness=1,
+        )
+        table_frame.pack(fill="both", expand=True, padx=16, pady=(0, 6))
+
+        columns = ("attivita_id", "tipo_id", "attivita", "inizio", "fine", "ore", "apertura", "chiusura", "pause")
+        tree = ttk.Treeview(table_frame, columns=columns, show="headings")
+
+        tree.heading("attivita_id", text="ID")
+        tree.heading("tipo_id", text="Tipo ID")
+        tree.heading("attivita", text="Attività")
+        tree.heading("inizio", text="Inizio")
+        tree.heading("fine", text="Fine")
+        tree.heading("ore", text="Ore nette")
+        tree.heading("apertura", text="Ap.")
+        tree.heading("chiusura", text="Ch.")
+        tree.heading("pause", text="Pause")
+
+        tree.column("attivita_id", width=0, stretch=False)
+        tree.column("tipo_id", width=0, stretch=False)
+        tree.column("attivita", width=200, anchor="w")
+        tree.column("inizio", width=90, anchor="center")
+        tree.column("fine", width=90, anchor="center")
+        tree.column("ore", width=80, anchor="center")
+        tree.column("apertura", width=40, anchor="center")
+        tree.column("chiusura", width=40, anchor="center")
+        tree.column("pause", width=260, anchor="w")
+
+        vsb = ttk.Scrollbar(table_frame, orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=vsb.set)
+        tree.pack(side="left", fill="both", expand=True)
+        vsb.pack(side="right", fill="y")
+
+        def _fmt_pause(pause_list) -> str:
+            if not pause_list:
+                return "—"
+            parti = []
+            for p in pause_list:
+                pi = p.get("data_inizio")
+                pf = p.get("data_fine")
+                dur = p.get("durata_minuti") or 0
+                pi_s = pi.strftime("%H:%M") if hasattr(pi, "strftime") else str(pi or "")
+                pf_s = pf.strftime("%H:%M") if hasattr(pf, "strftime") else str(pf or "")
+                pagata = "P" if p.get("pagata") else ""
+                parti.append(f"{pi_s}-{pf_s}({int(dur)}min{' '+pagata if pagata else ''})")
+            return "  ".join(parti)
+
+        def refresh_attivita_rows() -> None:
+            tree.delete(*tree.get_children())
+            if not attivita_rows:
+                tree.insert("", "end", values=("", "", "Nessuna attività trovata", "", "", "", "", "", ""))
+                return
+            for row in attivita_rows:
+                attivita_id = row.get("attivita_id")
+                tipo_id = row.get("tipo_attivita_id")
+                attivita = row.get("attivita") or ""
+                inizio = row.get("data_inizio")
+                fine = row.get("data_fine")
+                minuti = row.get("durata_minuti") or 0
+                ap = "✔" if row.get("apertura_giornata") else ""
+                ch = "✔" if row.get("chiusura_giornata") else ""
+                pause_str = _fmt_pause(row.get("pause") or [])
+
+                inizio_str = inizio.strftime("%H:%M") if hasattr(inizio, "strftime") else str(inizio or "")
+                fine_str = fine.strftime("%H:%M") if hasattr(fine, "strftime") else str(fine or "")
+                ore_str = f"{float(minuti) / 60:.2f}h"
+
+                tree.insert("", "end", values=(
+                    attivita_id, tipo_id, attivita,
+                    inizio_str, fine_str, ore_str,
+                    ap, ch, pause_str,
+                ))
+
+        refresh_attivita_rows()
+
+        # --- Barra azioni ---
         editor_frame = tk.Frame(dialog, bg=COLORS["background"])
-        editor_frame.pack(fill="x", padx=16, pady=(0, 8))
+        editor_frame.pack(fill="x", padx=16, pady=(4, 4))
 
         tk.Label(
             editor_frame,
@@ -494,7 +576,7 @@ class AnomalieView:
             font=FONTS["label"],
             bg=COLORS["background"],
             fg=COLORS.get("text_dark", "#222"),
-        ).pack(side="left", padx=(0, 8))
+        ).pack(side="left", padx=(0, 6))
 
         tipo_var = tk.StringVar()
         tipo_combo = ttk.Combobox(
@@ -503,76 +585,19 @@ class AnomalieView:
             values=list(tipi_by_desc.keys()),
             state="readonly" if tipi_by_desc else "disabled",
             font=FONTS.get("input", FONTS.get("label")),
-            width=30,
+            width=28,
         )
         tipo_combo.pack(side="left", padx=(0, 8))
-
-        table_frame = tk.Frame(
-            dialog,
-            bg=COLORS["white"],
-            highlightbackground=COLORS["border"],
-            highlightthickness=1,
-        )
-        table_frame.pack(fill="both", expand=True, padx=16, pady=(0, 12))
-
-        columns = ("attivita_id", "tipo_id", "attivita", "inizio", "fine", "ore")
-        tree = ttk.Treeview(table_frame, columns=columns, show="headings")
-
-        tree.heading("attivita_id", text="ID")
-        tree.heading("tipo_id", text="Tipo ID")
-        tree.heading("attivita", text="Attività")
-        tree.heading("inizio", text="Inizio")
-        tree.heading("fine", text="Fine")
-        tree.heading("ore", text="Ore")
-
-        tree.column("attivita_id", width=0, stretch=False)
-        tree.column("tipo_id", width=0, stretch=False)
-        tree.column("attivita", width=220, anchor="w")
-        tree.column("inizio", width=140, anchor="center")
-        tree.column("fine", width=140, anchor="center")
-        tree.column("ore", width=100, anchor="center")
-
-        vsb = ttk.Scrollbar(table_frame, orient="vertical", command=tree.yview)
-        tree.configure(yscrollcommand=vsb.set)
-        tree.pack(side="left", fill="both", expand=True)
-        vsb.pack(side="right", fill="y")
-
-        def refresh_attivita_rows() -> None:
-            tree.delete(*tree.get_children())
-            if not attivita_rows:
-                tree.insert("", "end", values=("", "", "Nessuna attività trovata", "", "", ""))
-                return
-
-            for row in attivita_rows:
-                attivita_id = row.get("attivita_id")
-                tipo_id = row.get("tipo_attivita_id")
-                attivita = row.get("attivita") or ""
-                inizio = row.get("data_inizio")
-                fine = row.get("data_fine")
-                minuti = row.get("durata_minuti") or 0
-
-                inizio_str = inizio.strftime("%H:%M") if hasattr(inizio, "strftime") else str(inizio or "")
-                fine_str = fine.strftime("%H:%M") if hasattr(fine, "strftime") else str(fine or "")
-                ore_str = f"{float(minuti) / 60:.2f}" if minuti is not None else ""
-
-                tree.insert(
-                    "",
-                    "end",
-                    values=(attivita_id, tipo_id, attivita, inizio_str, fine_str, ore_str),
-                )
-
-        refresh_attivita_rows()
 
         def on_tree_select(_event=None) -> None:
             selection = tree.selection()
             if not selection:
                 return
             item = tree.item(selection[0])
-            values = item.get("values") or []
-            if len(values) < 2:
+            vals = item.get("values") or []
+            if len(vals) < 2:
                 return
-            tipo_id = values[1]
-            tipo_desc = tipi_by_id.get(tipo_id)
+            tipo_desc = tipi_by_id.get(vals[1])
             if tipo_desc:
                 tipo_var.set(tipo_desc)
 
@@ -581,63 +606,196 @@ class AnomalieView:
         def on_update_attivita() -> None:
             selection = tree.selection()
             if not selection:
-                messagebox.showwarning(
-                    "Selezione mancante",
-                    "Seleziona una riga da aggiornare.",
-                    parent=dialog,
-                )
+                messagebox.showwarning("Selezione mancante", "Seleziona una riga da aggiornare.", parent=dialog)
                 return
-
             new_desc = tipo_var.get().strip()
             new_tipo_id = tipi_by_desc.get(new_desc)
             if not new_tipo_id:
-                messagebox.showwarning(
-                    "Tipo non valido",
-                    "Seleziona un tipo attività valido.",
-                    parent=dialog,
-                )
+                messagebox.showwarning("Tipo non valido", "Seleziona un tipo attività valido.", parent=dialog)
                 return
-
-            item = tree.item(selection[0])
-            values = item.get("values") or []
-            if len(values) < 1:
-                return
-            attivita_id = values[0]
+            vals = tree.item(selection[0]).get("values") or []
+            attivita_id = vals[0] if vals else None
             if not attivita_id:
                 return
-
             try:
                 update_attivita_tim(int(attivita_id), int(new_tipo_id))
                 nonlocal_rows = fetch_attivita_tim(codice, data_ril)
                 attivita_rows.clear()
                 attivita_rows.extend(nonlocal_rows)
                 refresh_attivita_rows()
-                on_tree_select()
             except Exception as exc:
-                messagebox.showerror(
-                    "Errore",
-                    f"Impossibile aggiornare l'attività:\n{exc}",
-                    parent=dialog,
-                )
+                messagebox.showerror("Errore", f"Impossibile aggiornare l'attività:\n{exc}", parent=dialog)
 
-        create_button(
-            editor_frame,
-            text="Aggiorna",
-            command=on_update_attivita,
-            variant="primary",
-            width=12,
-        ).pack(side="left")
+        create_button(editor_frame, text="Aggiorna", command=on_update_attivita, variant="primary", width=10).pack(side="left", padx=(0, 8))
 
+        def on_open_split() -> None:
+            """Apre il popup dedicato per dividere l'attività selezionata in N fasce."""
+            selection = tree.selection()
+            if not selection:
+                messagebox.showwarning("Selezione mancante", "Seleziona un'attività da dividere.", parent=dialog)
+                return
+            vals = tree.item(selection[0]).get("values") or []
+            attivita_id = vals[0] if vals else None
+            inizio_str = vals[3] if len(vals) > 3 else ""
+            fine_str = vals[4] if len(vals) > 4 else ""
+            attivita_desc = vals[2] if len(vals) > 2 else ""
+            if not attivita_id:
+                return
+
+            # --- Popup dedicato split ---
+            split_win = tk.Toplevel(dialog)
+            split_win.title("Dividi Attività")
+            split_win.geometry("620x420")
+            split_win.configure(bg=COLORS["background"])
+            split_win.transient(dialog)
+            split_win.grab_set()
+
+            tk.Label(
+                split_win,
+                text=f"Dividi:  {attivita_desc}   {inizio_str} → {fine_str}",
+                font=FONTS["big"],
+                bg=COLORS["background"],
+                fg=COLORS.get("text_dark", "#222"),
+            ).pack(anchor="w", padx=16, pady=(12, 6))
+
+            tk.Label(
+                split_win,
+                text="Definisci le fasce orarie (min. 2). La Fine di ogni fascia diventa l'Inizio della successiva.",
+                font=FONTS.get("subtitle", FONTS["label"]),
+                bg=COLORS["background"],
+                fg=COLORS.get("text_light", "#666"),
+                wraplength=580,
+            ).pack(anchor="w", padx=16, pady=(0, 8))
+
+            # Tabella fasce
+            sf_frame = tk.Frame(split_win, bg=COLORS["white"], highlightbackground=COLORS["border"], highlightthickness=1)
+            sf_frame.pack(fill="both", expand=True, padx=16, pady=(0, 8))
+
+            sf_cols = ("inizio", "fine", "tipo")
+            sf_tree = ttk.Treeview(sf_frame, columns=sf_cols, show="headings", height=8)
+            sf_tree.heading("inizio", text="Inizio")
+            sf_tree.heading("fine", text="Fine")
+            sf_tree.heading("tipo", text="Tipo Attività")
+            sf_tree.column("inizio", width=100, anchor="center")
+            sf_tree.column("fine", width=100, anchor="center")
+            sf_tree.column("tipo", width=340, anchor="w")
+            sf_tree.pack(fill="both", expand=True)
+
+            # Lista interna fasce: [{"inizio": "HH:MM", "fine": "HH:MM", "tipo_id": int, "tipo_desc": str}]
+            fasce: list = []
+
+            def _refresh_sf_tree():
+                sf_tree.delete(*sf_tree.get_children())
+                for f in fasce:
+                    sf_tree.insert("", "end", values=(f["inizio"], f["fine"], f["tipo_desc"]))
+
+            def _add_fascia():
+                # Determina inizio automatico
+                inizio_auto = fasce[-1]["fine"] if fasce else inizio_str
+
+                add_win = tk.Toplevel(split_win)
+                add_win.title("Aggiungi Fascia")
+                add_win.geometry("360x180")
+                add_win.configure(bg=COLORS["background"])
+                add_win.transient(split_win)
+                add_win.grab_set()
+
+                frm = tk.Frame(add_win, bg=COLORS["background"])
+                frm.pack(fill="both", expand=True, padx=16, pady=12)
+
+                tk.Label(frm, text=f"Inizio: {inizio_auto}", font=FONTS["label"], bg=COLORS["background"]).grid(row=0, column=0, columnspan=2, sticky="w", pady=4)
+
+                tk.Label(frm, text="Fine (HH:MM):", font=FONTS["label"], bg=COLORS["background"]).grid(row=1, column=0, sticky="w", pady=4)
+                fine_var = tk.StringVar()
+                tk.Entry(frm, textvariable=fine_var, width=10, font=FONTS.get("input", FONTS["label"])).grid(row=1, column=1, sticky="w", pady=4)
+
+                tk.Label(frm, text="Tipo attività:", font=FONTS["label"], bg=COLORS["background"]).grid(row=2, column=0, sticky="w", pady=4)
+                tipo_add_var = tk.StringVar()
+                ttk.Combobox(
+                    frm,
+                    textvariable=tipo_add_var,
+                    values=list(tipi_by_desc.keys()),
+                    state="readonly",
+                    width=22,
+                ).grid(row=2, column=1, sticky="w", pady=4)
+
+                def _conferma_fascia():
+                    fine_v = fine_var.get().strip()
+                    tipo_d = tipo_add_var.get().strip()
+                    tipo_i = tipi_by_desc.get(tipo_d)
+                    if not fine_v:
+                        messagebox.showwarning("Fine mancante", "Inserisci l'orario di fine.", parent=add_win)
+                        return
+                    if not tipo_i:
+                        messagebox.showwarning("Tipo mancante", "Seleziona il tipo attività.", parent=add_win)
+                        return
+                    fasce.append({"inizio": inizio_auto, "fine": fine_v, "tipo_id": tipo_i, "tipo_desc": tipo_d})
+                    _refresh_sf_tree()
+                    add_win.destroy()
+
+                btn_f = tk.Frame(frm, bg=COLORS["background"])
+                btn_f.grid(row=3, column=0, columnspan=2, pady=(10, 0))
+                create_button(btn_f, text="Conferma", command=_conferma_fascia, variant="primary", width=10).pack(side="left", padx=4)
+                create_button(btn_f, text="Annulla", command=add_win.destroy, variant="secondary", width=10).pack(side="left")
+
+            def _remove_fascia():
+                sel = sf_tree.selection()
+                if not sel:
+                    return
+                idx = sf_tree.index(sel[0])
+                if 0 <= idx < len(fasce):
+                    fasce.pop(idx)
+                    _refresh_sf_tree()
+
+            def _salva_split():
+                # Aggiunge automaticamente l'ultima fascia se non coperta
+                ultima_fine = fasce[-1]["fine"] if fasce else inizio_str
+                if ultima_fine != fine_str:
+                    messagebox.showwarning(
+                        "Fasce incomplete",
+                        f"L'ultima fascia finisce a {ultima_fine} ma l'attività finisce a {fine_str}.\n"
+                        f"Aggiungi una fascia finale fino a {fine_str}.",
+                        parent=split_win,
+                    )
+                    return
+                if len(fasce) < 2:
+                    messagebox.showwarning("Fasce insufficienti", "Aggiungi almeno 2 fasce.", parent=split_win)
+                    return
+                try:
+                    split_attivita_tim_multiplo(int(attivita_id), [
+                        {"inizio": f["inizio"], "fine": f["fine"], "tipo_id": f["tipo_id"]}
+                        for f in fasce
+                    ])
+                    nonlocal_rows = fetch_attivita_tim(codice, data_ril)
+                    attivita_rows.clear()
+                    attivita_rows.extend(nonlocal_rows)
+                    refresh_attivita_rows()
+                    split_win.destroy()
+                except Exception as exc:
+                    messagebox.showerror("Errore", f"Impossibile dividere l'attività:\n{exc}", parent=split_win)
+
+            # Pulsanti del popup split
+            btn_bar = tk.Frame(split_win, bg=COLORS["background"])
+            btn_bar.pack(fill="x", padx=16, pady=(0, 12))
+            create_button(btn_bar, text="➕ Aggiungi Fascia", command=_add_fascia, variant="primary", width=16).pack(side="left", padx=(0, 6))
+            create_button(btn_bar, text="🗑 Rimuovi", command=_remove_fascia, variant="danger", width=10).pack(side="left", padx=(0, 16))
+            create_button(btn_bar, text="✔ Salva", command=_salva_split, variant="primary", width=10).pack(side="right", padx=(6, 0))
+            create_button(btn_bar, text="Annulla", command=split_win.destroy, variant="secondary", width=10).pack(side="right")
+
+            # Prima fascia pre-popolata con tipo originale
+            tipo_orig_desc = tipi_by_id.get(vals[1], "") if len(vals) > 1 else ""
+            tipo_orig_id = tipi_by_desc.get(tipo_orig_desc)
+            if tipo_orig_id and inizio_str:
+                fasce.append({"inizio": inizio_str, "fine": "", "tipo_id": tipo_orig_id, "tipo_desc": tipo_orig_desc})
+                # Non aggiungiamo alla tree finché non ha fine — l'utente usa "Aggiungi Fascia" normalmente
+                fasce.clear()
+
+        create_button(editor_frame, text="✂ Dividi", command=on_open_split, variant="warning", width=10).pack(side="left")
+
+        # --- Footer ---
         footer = tk.Frame(dialog, bg=COLORS["background"])
         footer.pack(fill="x", padx=16, pady=(0, 12))
-
-        create_button(
-            footer,
-            text="Chiudi",
-            command=dialog.destroy,
-            variant="secondary",
-            width=12,
-        ).pack(side="right")
+        create_button(footer, text="Chiudi", command=dialog.destroy, variant="secondary", width=12).pack(side="right")
 
     def _open_codici_gestionali_form(self, row_values: List[Any]) -> None:
         try:

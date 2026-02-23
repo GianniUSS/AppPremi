@@ -885,6 +885,30 @@ def _ensure_malus_bonus_schema(cur: Any) -> None:
             raise
 
 
+def delete_records_by_period(anno: int, mese: int, tipo_attivita: str) -> int:
+    """
+    Elimina tutti i record del DB relativi a un determinato mese/anno/tipo attività.
+    Usato prima di un re-import per garantire che il DB rispecchi esattamente il file.
+
+    Returns:
+        Numero di record eliminati
+    """
+    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+        with closing(conn.cursor()) as cur:
+            cur.execute(
+                f"""
+                DELETE FROM {TABLE_NAME}
+                WHERE YEAR(data) = %s
+                  AND MONTH(data) = %s
+                  AND tipo_attivita = %s
+                """,
+                (anno, mese, tipo_attivita),
+            )
+            deleted = cur.rowcount
+            conn.commit()
+            return deleted
+
+
 def insert_batch_data(values: List[Tuple]) -> int:
     """
     Inserisce i dati in batch nel database usando upsert.
@@ -1505,7 +1529,7 @@ def fetch_attivita_tim(
     codice_preparatore: str,
     data_riferimento: datetime.date,
 ) -> List[Dict[str, Any]]:
-    """Recupera le attività TIM con inizio/fine e durata (minuti) per codice e data."""
+    """Recupera le attività TIM con inizio/fine, durata, apertura/chiusura giornata e pause."""
     if not codice_preparatore:
         return []
 
@@ -1525,7 +1549,10 @@ def fetch_attivita_tim(
                     GREATEST(
                         TIMESTAMPDIFF(MINUTE, a.data_inizio, a.data_fine) - COALESCE(a.pausa, 0),
                         0
-                    ) AS durata_minuti
+                    ) AS durata_minuti,
+                    COALESCE(a.pausa, 0) AS pausa_minuti,
+                    a.apertura_giornata,
+                    a.chiusura_giornata
                 FROM attivita a
                 JOIN tipoattivita ta ON a.tipo_attivita_id = ta.id
                 JOIN utente u ON a.utente_id = u.id
@@ -1536,8 +1563,23 @@ def fetch_attivita_tim(
                 ORDER BY a.data_inizio
             """
             cur.execute(query, (codice, data_riferimento, data_riferimento))
-            rows = cur.fetchall() or []
-            return cast(List[Dict[str, Any]], rows)
+            rows = cast(List[Dict[str, Any]], cur.fetchall() or [])
+
+            # Per ogni attività recupera le pause collegate dalla tabella pausa
+            for row in rows:
+                cur.execute(
+                    """
+                    SELECT id, data_inizio, data_fine,
+                           ROUND(durata) AS durata_minuti, pagata
+                    FROM pausa
+                    WHERE attivita_id = %s
+                    ORDER BY data_inizio
+                    """,
+                    (row["attivita_id"],),
+                )
+                row["pause"] = cast(List[Dict[str, Any]], cur.fetchall() or [])
+
+            return rows
 
 
 def fetch_tipi_attivita_tim() -> List[Dict[str, Any]]:
@@ -1567,6 +1609,180 @@ def update_attivita_tim(attivita_id: int, tipo_attivita_id: int) -> None:
                 """,
                 (tipo_attivita_id, attivita_id),
             )
+            conn.commit()
+
+
+def split_attivita_tim(
+    attivita_id: int,
+    ora_taglio: str,
+    nuovo_tipo_id: int,
+) -> None:
+    """
+    Divide un'attività TIM in due a un orario di taglio specificato.
+
+    - La riga originale viene accorciata: data_fine = data_inizio.date + ora_taglio
+    - Viene inserita una nuova riga: data_inizio = taglio, data_fine = fine originale,
+      stesso utente/data_riferimento, tipo = nuovo_tipo_id, pausa = 0
+
+    Args:
+        attivita_id:   ID della riga da dividere
+        ora_taglio:    Orario di taglio nel formato "HH:MM"
+        nuovo_tipo_id: ID del tipo attività per la seconda parte
+    """
+    with closing(mysql.connector.connect(**MYSQL_CONFIG_MAIN)) as conn:
+        with closing(conn.cursor(dictionary=True)) as cur:
+            # Legge la riga originale
+            cur.execute(
+                """
+                SELECT id, utente_id, data_riferimento, data_inizio, data_fine, pausa
+                FROM attivita
+                WHERE id = %s
+                """,
+                (attivita_id,),
+            )
+            row = cur.fetchone()
+            if not row:
+                raise ValueError(f"Attività {attivita_id} non trovata.")
+
+            data_inizio: datetime.datetime = row["data_inizio"]
+            data_fine: datetime.datetime = row["data_fine"]
+            data_rif = row["data_riferimento"]
+            utente_id = row["utente_id"]
+
+            # Costruisce il datetime del taglio sulla stessa data di data_inizio
+            try:
+                h, m = [int(x) for x in ora_taglio.strip().split(":")]
+            except ValueError:
+                raise ValueError(f"Formato orario non valido: '{ora_taglio}'. Usare HH:MM.")
+
+            taglio_dt = data_inizio.replace(hour=h, minute=m, second=0, microsecond=0)
+
+            if taglio_dt <= data_inizio:
+                raise ValueError("L'orario di taglio deve essere successivo all'inizio dell'attività.")
+            if taglio_dt >= data_fine:
+                raise ValueError("L'orario di taglio deve essere precedente alla fine dell'attività.")
+
+            # Aggiorna la fine della riga originale
+            cur.execute(
+                "UPDATE attivita SET data_fine = %s WHERE id = %s",
+                (taglio_dt, attivita_id),
+            )
+
+            # Inserisce la nuova riga (seconda parte)
+            cur.execute(
+                """
+                INSERT INTO attivita
+                    (utente_id, data_riferimento, data_inizio, data_fine, tipo_attivita_id, pausa)
+                VALUES (%s, %s, %s, %s, %s, 0)
+                """,
+                (utente_id, data_rif, taglio_dt, data_fine, nuovo_tipo_id),
+            )
+            conn.commit()
+
+
+def split_attivita_tim_multiplo(
+    attivita_id: int,
+    fasce: List[Dict[str, Any]],
+) -> None:
+    """
+    Divide un'attività TIM in N fasce in una sola operazione.
+
+    Args:
+        attivita_id: ID dell'attività originale da dividere
+        fasce: lista di dict ordinata per orario, ognuno con:
+               - 'inizio'  (str "HH:MM")  — primo elemento = inizio originale
+               - 'fine'    (str "HH:MM")  — ultimo elemento = fine originale
+               - 'tipo_id' (int)          — ID tipo attività per questa fascia
+
+    Comportamento:
+        - La riga originale viene aggiornata con la prima fascia (inizio originale → fine[0])
+        - Per ogni fascia successiva viene inserita una nuova riga
+        - I flag apertura_giornata e chiusura_giornata vengono preservati
+          rispettivamente sulla prima e sull'ultima fascia
+    """
+    if not fasce or len(fasce) < 2:
+        raise ValueError("Servono almeno 2 fasce per dividere un'attività.")
+
+    with closing(mysql.connector.connect(**MYSQL_CONFIG_MAIN)) as conn:
+        with closing(conn.cursor(dictionary=True)) as cur:
+            # Legge la riga originale
+            cur.execute(
+                """
+                SELECT id, utente_id, data_riferimento, data_inizio, data_fine,
+                       apertura_giornata, chiusura_giornata
+                FROM attivita
+                WHERE id = %s
+                """,
+                (attivita_id,),
+            )
+            row = cur.fetchone()
+            if not row:
+                raise ValueError(f"Attività {attivita_id} non trovata.")
+
+            utente_id = row["utente_id"]
+            data_rif = row["data_riferimento"]
+            data_inizio_orig: datetime.datetime = row["data_inizio"]
+            apertura = row["apertura_giornata"]
+            chiusura = row["chiusura_giornata"]
+
+            def _parse_ora(ora_str: str, base_dt: datetime.datetime) -> datetime.datetime:
+                try:
+                    h, m = [int(x) for x in ora_str.strip().split(":")]
+                except ValueError:
+                    raise ValueError(f"Formato orario non valido: '{ora_str}'. Usare HH:MM.")
+                return base_dt.replace(hour=h, minute=m, second=0, microsecond=0)
+
+            # Costruisce i datetime per ogni fascia
+            dt_fasce = []
+            for i, fascia in enumerate(fasce):
+                dt_inizio = _parse_ora(fascia["inizio"], data_inizio_orig)
+                dt_fine = _parse_ora(fascia["fine"], data_inizio_orig)
+                if dt_fine <= dt_inizio:
+                    raise ValueError(
+                        f"Fascia {i+1}: la fine ({fascia['fine']}) deve essere "
+                        f"successiva all'inizio ({fascia['inizio']})."
+                    )
+                dt_fasce.append((dt_inizio, dt_fine, fascia["tipo_id"]))
+
+            # Aggiorna la riga originale con la prima fascia
+            # Mantiene apertura_giornata sulla prima, rimuove chiusura_giornata
+            cur.execute(
+                """
+                UPDATE attivita
+                SET tipo_attivita_id = %s,
+                    data_inizio = %s,
+                    data_fine = %s,
+                    chiusura_giornata = b'0',
+                    pausa = 0
+                WHERE id = %s
+                """,
+                (dt_fasce[0][2], dt_fasce[0][0], dt_fasce[0][1], attivita_id),
+            )
+
+            # Inserisce le fasce intermedie (senza apertura né chiusura)
+            for dt_inizio, dt_fine, tipo_id in dt_fasce[1:-1]:
+                cur.execute(
+                    """
+                    INSERT INTO attivita
+                        (utente_id, data_riferimento, data_inizio, data_fine,
+                         tipo_attivita_id, pausa, apertura_giornata, chiusura_giornata)
+                    VALUES (%s, %s, %s, %s, %s, 0, b'0', b'0')
+                    """,
+                    (utente_id, data_rif, dt_inizio, dt_fine, tipo_id),
+                )
+
+            # Inserisce l'ultima fascia — mantiene chiusura_giornata originale
+            last = dt_fasce[-1]
+            cur.execute(
+                """
+                INSERT INTO attivita
+                    (utente_id, data_riferimento, data_inizio, data_fine,
+                     tipo_attivita_id, pausa, apertura_giornata, chiusura_giornata)
+                VALUES (%s, %s, %s, %s, %s, 0, b'0', %s)
+                """,
+                (utente_id, data_rif, last[0], last[1], last[2], chiusura),
+            )
+
             conn.commit()
 
 

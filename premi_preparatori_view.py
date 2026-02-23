@@ -198,9 +198,10 @@ class PremiPreparatoriView(tk.Frame):
         }
 
         self._tree_headers = headers
+        self._sort_reverse: dict = {}
 
         for col, title in headers.items():
-            self.tree.heading(col, text=title)
+            self.tree.heading(col, text=title, command=lambda c=col: self._sort_by_col(c))
 
         self.tree.column("codice", width=90, anchor="center")
         self.tree.column("nome", width=180, anchor="w")
@@ -577,6 +578,22 @@ class PremiPreparatoriView(tk.Frame):
             return None
 
         return None
+
+    def _sort_by_col(self, col: str) -> None:
+        """Ordina il Treeview per la colonna cliccata (alterna asc/desc)."""
+        reverse = self._sort_reverse.get(col, False)
+        items = [(self.tree.set(k, col), k) for k in self.tree.get_children("")]
+
+        def sort_key(val):
+            try:
+                return (0, float(str(val[0]).replace(",", ".").replace(" ", "")))
+            except (ValueError, TypeError):
+                return (1, str(val[0]).lower())
+
+        items.sort(key=sort_key, reverse=reverse)
+        for index, (_, k) in enumerate(items):
+            self.tree.move(k, "", index)
+        self._sort_reverse[col] = not reverse
 
     def _calcola_premi_preparatori(
         self,
