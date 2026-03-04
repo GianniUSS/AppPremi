@@ -1,11 +1,11 @@
 {
-    "latest_version": "1.2.22",
-    "release_date": "2026-02-19",
+    "latest_version": "1.2.23",
+    "release_date": "2026-03-04",
     "release_notes": [
-        "Fix: aggiornamento con log diagnostico e CMD visibile"
+        "Nuova versione 1.2.23"
     ],
-    "download_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.22/GestionePremi.zip",
-    "sha256": "98859564E80FCDB177B23C920DC1E08D6B88A464019AA2FE62DEE311106C99A8",
+    "download_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.23/GestionePremi.zip",
+    "sha256": "C732C13005D0708663DB75186B639F3F2DA63111730E644F1DEA79AD42FEC37C",
     "file_name": "GestionePremi.zip",
     "icons_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.7/icons-v1.2.7.zip"
 }
