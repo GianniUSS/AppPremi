@@ -26,7 +26,7 @@ if exist "%PYTHON_DLL%" (
 )
 
 if exist "%VCRUNTIME_DLL_TMP%" del /f "%VCRUNTIME_DLL_TMP%"
-"%PYTHON_BIN%" -c "import os, sys; names=('vcruntime140.dll','vcruntime140_1.dll'); paths=[sys.base_prefix, os.path.join(sys.base_prefix,'DLLs'), os.path.join(os.environ.get('SystemRoot','C:\\Windows'),'System32')]; found=[next((os.path.join(p,n) for p in paths if os.path.exists(os.path.join(p,n))), '') for n in names]; print('\n'.join([p for p in found if p]))" > "%VCRUNTIME_DLL_TMP%"
+"%PYTHON_BIN%" -c "import os, sys; names=('vcruntime140.dll','vcruntime140_1.dll'); paths=[sys.base_prefix, os.path.join(sys.base_prefix,'DLLs'), os.path.join(os.environ.get('SystemRoot','C:\\Windows'),'System32')]; found=[next((os.path.join(p,n) for p in paths if os.path.exists(os.path.join(p,n))), '') for n in names]; print('\\n'.join([p for p in found if p]))" > "%VCRUNTIME_DLL_TMP%"
 for /f "usebackq delims=" %%A in ("%VCRUNTIME_DLL_TMP%") do (
     if exist "%%A" set "ADD_VCRUNTIME=!ADD_VCRUNTIME! --add-binary ^"%%A^";."
 )

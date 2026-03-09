@@ -4,6 +4,7 @@ import os
 import datetime
 from contextlib import closing
 from decimal import Decimal, ROUND_HALF_UP
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, cast
 
@@ -60,6 +61,7 @@ class PremiRicevitoriView(tk.Frame):
         self.total_pallet_var = tk.StringVar(value="0")
         self.media_pallet_ora_var = tk.StringVar(value="0.00")
         self._current_premi: List[Dict[str, Any]] = []
+        self._sort_reverse: Dict[str, bool] = {}
 
         self._build_ui()
         self._carica_premi()
@@ -256,7 +258,7 @@ class PremiRicevitoriView(tk.Frame):
         self._tree_headers = headers
 
         for col, title in headers.items():
-            self.tree.heading(col, text=title)
+            self.tree.heading(col, text=title, command=lambda c=col: self._sort_by_column(c))
 
         self.tree.column("codice", width=90, anchor="center")
         self.tree.column("nome", width=200, anchor="w")
@@ -305,6 +307,40 @@ class PremiRicevitoriView(tk.Frame):
             data.append(row)
 
         return data
+
+    # --------------------------------------------------------- ORDINAMENTO ---
+    def _sort_by_column(self, col: str) -> None:
+        """Ordina la tabella in base alla colonna selezionata."""
+        reverse = self._sort_reverse.get(col, False)
+        items = list(self.tree.get_children(""))
+
+        def sort_key(item_id: str):
+            value = self.tree.set(item_id, col)
+            return self._coerce_sort_value(value)
+
+        items.sort(key=sort_key, reverse=reverse)
+
+        for index, item_id in enumerate(items):
+            self.tree.move(item_id, "", index)
+
+        self._sort_reverse[col] = not reverse
+
+    @staticmethod
+    def _coerce_sort_value(value):
+        if value is None:
+            return (1, "")
+        text = str(value).strip()
+        if not text:
+            return (1, "")
+        normalized = text.replace(" ", "")
+        if re.match(r"^-?\d{1,3}(\.\d{3})*(,\d+)?$", normalized):
+            normalized = normalized.replace(".", "").replace(",", ".")
+        elif re.match(r"^-?\d+([\.,]\d+)?$", normalized):
+            normalized = normalized.replace(",", ".")
+        try:
+            return (0, float(normalized))
+        except ValueError:
+            return (0, text.lower())
 
     def _export_premi_excel(self) -> None:
         premi = getattr(self, "_current_premi", [])
@@ -585,6 +621,13 @@ class PremiRicevitoriView(tk.Frame):
             WHERE dp.tipo_attivita IN ({placeholders})
               AND YEAR(dp.data) = %s
               AND MONTH(dp.data) = %s
+              AND NOT EXISTS (
+                  SELECT 1 FROM anomalie a
+                  WHERE a.data_rilevamento = dp.data
+                      AND a.codice_preparatore = dp.codice_preparatore
+                      AND a.tipo_attivita = dp.tipo_attivita
+                      AND a.stato = 'ELIMINATA'
+              )
         """
         params: List[Any] = [*tipo_validi, anno, mese]
 
@@ -819,10 +862,9 @@ class PremiRicevitoriView(tk.Frame):
             soglia_rot = Decimal(str(record.get("soglia_rotture", 0) or 0))
             soglia_diff = Decimal(str(record.get("soglia_differenze", 0) or 0))
 
-            totale = rotture + differenze
-            soglia_totale = soglia_rot + soglia_diff
-
-            if soglia_totale > 0 and totale < soglia_totale:
+            # Il bonus scatta solo se ENTRAMBE le soglie sono rispettate
+            # (verifica separata, non aggregata)
+            if rotture <= soglia_rot and differenze <= soglia_diff:
                 return Decimal("0.15")
         except Exception:
             return None
@@ -866,6 +908,13 @@ class PremiRicevitoriView(tk.Frame):
             WHERE dp.tipo_attivita IN ({placeholders})
                 AND YEAR(dp.data) = %s
                 AND MONTH(dp.data) = %s
+                AND NOT EXISTS (
+                    SELECT 1 FROM anomalie a
+                    WHERE a.data_rilevamento = dp.data
+                        AND a.codice_preparatore = dp.codice_preparatore
+                        AND a.tipo_attivita = dp.tipo_attivita
+                        AND a.stato = 'ELIMINATA'
+                )
         """
         params: List[Any] = [*tipo_validi, anno, mese]
 

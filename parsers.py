@@ -201,12 +201,29 @@ def parse_preparatori(file_path: str) -> pd.DataFrame:
         logger.warning("Colonna tempo lavorato assente - ore_gestionale impostato a 0")
         col_tempo = None
 
+    # Colonna "Ora inizio preparazione" per calcolo DATA TURNO (turno notturno)
+    col_ora_inizio = None
+    try:
+        col_ora_inizio = find_column(
+            df,
+            [["ora inizio preparazione"], ["ora inizio"]],
+            required=False,
+        )
+        if col_ora_inizio:
+            logger.debug("Colonna ora inizio trovata: %s", col_ora_inizio)
+        else:
+            logger.debug("Colonna ora inizio non trovata - DATA TURNO non applicata")
+    except ValueError:
+        logger.debug("Colonna ora inizio assente - DATA TURNO non applicata")
+
     # Seleziona colonne, gestendo il caso di col_nome opzionale
     columns_to_copy = [col_data, col_cod, col_colli]
     if col_nome:
         columns_to_copy.append(col_nome)
     if col_tempo:
         columns_to_copy.append(col_tempo)
+    if col_ora_inizio:
+        columns_to_copy.append(col_ora_inizio)
 
     sub = df[columns_to_copy].copy()
 
@@ -218,10 +235,46 @@ def parse_preparatori(file_path: str) -> pd.DataFrame:
     else:
         sub['tempo_lavorato_raw'] = 0
 
+    # Salva la colonna ora inizio prima di rimuoverla
+    ora_inizio_raw = None
+    if col_ora_inizio:
+        ora_inizio_raw = sub[col_ora_inizio].copy()
+        sub.drop(columns=[col_ora_inizio], inplace=True)
+
     # Parsing date vettorializzato: gestisce anche stringhe 8-caratteri yyyymmdd
     sdate = sub[col_data].astype(str).str.strip()
     sdate = sdate.str.replace(r"^(\d{4})(\d{2})(\d{2})$", r"\1-\2-\3", regex=True)
     sub[col_data] = pd.to_datetime(sdate, errors="coerce").dt.date
+
+    # DATA TURNO: se ora inizio < 04:00, il turno appartiene al giorno precedente
+    if ora_inizio_raw is not None:
+        def _get_hour(val) -> int:
+            """Estrae l'ora da vari formati (time, datetime, str, timedelta)."""
+            if pd.isna(val):
+                return 12  # default: nessun aggiustamento
+            if isinstance(val, datetime.time):
+                return val.hour
+            if isinstance(val, datetime.datetime):
+                return val.hour
+            if isinstance(val, datetime.timedelta):
+                return int(val.total_seconds() // 3600) % 24
+            s = str(val).strip()
+            if not s:
+                return 12
+            try:
+                # Formato "HH:MM:SS" o "HH:MM"
+                return int(s.split(":")[0])
+            except (ValueError, IndexError):
+                return 12
+
+        ore_inizio = ora_inizio_raw.apply(_get_hour)
+        turno_notturno = ore_inizio < 4
+        n_notte = turno_notturno.sum()
+        if n_notte > 0:
+            logger.info("DATA TURNO: %d righe con turno notturno (ora < 04:00) -> data -1 giorno", n_notte)
+            sub.loc[turno_notturno, col_data] = sub.loc[turno_notturno, col_data].apply(
+                lambda d: d - datetime.timedelta(days=1) if d is not None else d
+            )
 
     sub = sub.dropna(subset=[col_data, col_cod, col_colli])
     logger.debug("Dati processati: %d righe valide", len(sub))
@@ -1343,19 +1396,25 @@ def parse_doppia_spunta(file_path: str) -> DoppiaSpuntaResult:
         sub["diff_original"] = 0
 
     # Penalità (errori) per preparatori: regola richiesta
-    # Se diff è 0 -> penalità 0, altrimenti abs(diff / uvc) se uvc>0, altrimenti abs(diff)
+    # Se diff è 0 -> penalità 0, se qtasped è 0 -> penalità 0,
+    # altrimenti abs(diff / uvc) se uvc>0, altrimenti abs(diff)
     penalita_raw = pd.Series(0, index=sub.index, dtype=float)
     diff_val = sub["diff_original"].copy()
-    
+
     if uvc_series is not None:
         uvc_val = pd.to_numeric(uvc_series, errors="coerce").fillna(0)
     else:
         uvc_val = pd.Series(0, index=sub.index, dtype=float)
 
-    # Per ogni riga: se diff=0 -> penalità=0, altrimenti calcola abs(diff/uvc) o abs(diff)
+    if qtasped_series is not None:
+        qtasped_val_pen = pd.to_numeric(qtasped_series, errors="coerce").fillna(0)
+    else:
+        qtasped_val_pen = pd.Series(0, index=sub.index, dtype=float)
+
+    # Per ogni riga: se diff=0 o qtasped=0 -> penalità=0, altrimenti calcola abs(diff/uvc) o abs(diff)
     for idx in sub.index:
         d = diff_val.loc[idx]
-        if d == 0:
+        if d == 0 or qtasped_val_pen.loc[idx] == 0:
             penalita_raw.loc[idx] = 0
         else:
             u = uvc_val.loc[idx]
@@ -1363,8 +1422,8 @@ def parse_doppia_spunta(file_path: str) -> DoppiaSpuntaResult:
                 penalita_raw.loc[idx] = abs(d / u)
             else:
                 penalita_raw.loc[idx] = abs(d)
-    
-    logger.debug("Calcolo penalità: se diff=0 -> 0, altrimenti abs(diff/uvc) con fallback abs(diff) quando uvc=0")
+
+    logger.debug("Calcolo penalità: se diff=0 o qtasped=0 -> 0, altrimenti abs(diff/uvc) con fallback abs(diff) quando uvc=0")
 
     sub["totale_colli"] = colli_val.astype(int)
 
@@ -1580,27 +1639,30 @@ def parse_doppia_spunta(file_path: str) -> DoppiaSpuntaResult:
         date_uniche = grouped['data'].unique()
         date_str = ', '.join([f"'{d}'" for d in date_uniche])
         
-        # Query compatibile: usa le date specifiche invece di subquery con LIMIT
+        # Query compatibile: usa le date specifiche, raggruppa anche per tipo (negozio)
         query = f"""
-            SELECT data, codice_preparatore, SUM(penalita) as penalita_totale
+            SELECT data, codice_preparatore, tipo, SUM(penalita) as penalita_totale
             FROM sessioni_doppia_spunta
             WHERE data IN ({date_str})
-            GROUP BY data, codice_preparatore
+            GROUP BY data, codice_preparatore, tipo
         """
         cursor.execute(query)
         penalita_db = cursor.fetchall()
         cursor.close()
         conn.close()
-        
-        # Crea un dizionario per mappare (data, codice) -> penalita_totale
+
+        # Crea un dizionario per mappare (data, codice, tipo) -> penalita_totale
         penalita_map = {}
         for row in penalita_db:
-            key = (str(row['data']), str(row['codice_preparatore']))
+            key = (str(row['data']), str(row['codice_preparatore']), str(row['tipo'] or ''))
             penalita_map[key] = float(row['penalita_totale'] or 0)
-        
+
         # Aggiorna SOLO grouped (DOPPIA_SPUNTA) con i valori reali dal database
         grouped['penalita_totale'] = grouped.apply(
-            lambda row: penalita_map.get((str(row['data']), str(row['codice_preparatore'])), 0.0),
+            lambda row: penalita_map.get(
+                (str(row['data']), str(row['codice_preparatore']), str(row.get('tipo') or '')),
+                0.0
+            ),
             axis=1
         )
         
@@ -1611,7 +1673,7 @@ def parse_doppia_spunta(file_path: str) -> DoppiaSpuntaResult:
         
         # Log di debug
         for key, val in list(penalita_map.items())[:3]:
-            logger.info(f"  DS: {key[0]} - {key[1]}: penalità={val}")
+            logger.info(f"  DS: {key[0]} - {key[1]} - {key[2]}: penalità={val}")
         for idx, row in penalita_picking.head(3).iterrows():
             logger.info(f"  PICK: {row['data']} - {row['codice_preparatore']}: penalità={row['penalita_totale']}")
             

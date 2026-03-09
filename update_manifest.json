@@ -1,11 +1,11 @@
 {
-    "latest_version": "1.2.23",
-    "release_date": "2026-03-04",
+    "latest_version": "1.2.24",
+    "release_date": "2026-03-09",
     "release_notes": [
-        "Nuova versione 1.2.23"
+        "Ordinamento colonne con click nei grid Carrellisti, Preparatori, Ricevitori e Doppia Spunta"
     ],
-    "download_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.23/GestionePremi.zip",
-    "sha256": "C732C13005D0708663DB75186B639F3F2DA63111730E644F1DEA79AD42FEC37C",
+    "download_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.24/GestionePremi.zip",
+    "sha256": "6B7F3E376E3FD3086612DFE6B526E7B446FF89BAA9EE568482CB4378608923E6",
     "file_name": "GestionePremi.zip",
     "icons_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.7/icons-v1.2.7.zip"
 }

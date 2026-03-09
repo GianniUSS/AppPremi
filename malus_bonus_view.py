@@ -449,7 +449,7 @@ class MalusBonusView(ttk.Frame):
             attivita_value,
             note,
         )
-        messagebox.showinfo("Salvato", "Valori malus/bonus salvati correttamente.")
+        messagebox.showinfo("Salvato", "Valori extra-bonus salvati correttamente.")
         self._update_status()
         self._refresh_history()
 

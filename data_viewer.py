@@ -274,6 +274,7 @@ class DataViewer:
             table_frame,
             columns=columns,
             show="headings",
+            selectmode="extended",
             yscrollcommand=vsb.set,
             xscrollcommand=hsb.set,
             height=20,
@@ -323,6 +324,16 @@ class DataViewer:
         self.sync_button.configure(state=tk.NORMAL)
         self.sync_button.pack(side="right", padx=10, pady=10)
 
+        # Pulsante elimina record
+        self.delete_button = create_button(
+            footer_frame,
+            text="🗑 Elimina Selezionati",
+            command=self._delete_selected_records,
+            variant="danger",
+            width=20,
+        )
+        self.delete_button.pack(side="right", padx=5, pady=10)
+
         # Pulsante nuove aperture (visibile solo per Doppia Spunta)
         self.nuove_aperture_button = create_button(
             footer_frame,
@@ -338,6 +349,7 @@ class DataViewer:
         self.sync_progress_label = None
 
         self.tree.bind("<Double-1>", self._show_details)
+        self.tree.bind("<Delete>", lambda e: self._delete_selected_records())
 
     def _collect_filters(self) -> Dict[str, Any]:
         filters: Dict[str, Any] = {
@@ -663,6 +675,71 @@ class DataViewer:
             return (0, float(normalized))
         except ValueError:
             return (0, text.lower())
+
+    def _delete_selected_records(self) -> None:
+        """Elimina i record selezionati dalla tabella dati_produzione."""
+        selected = self.tree.selection()
+        if not selected:
+            messagebox.showwarning(
+                "Nessuna selezione",
+                "Seleziona uno o più record dalla tabella.",
+                parent=self.window,
+            )
+            return
+
+        record_ids: List[int] = []
+        for item_id in selected:
+            values = self.tree.item(item_id).get("values") or []
+            if values:
+                try:
+                    record_ids.append(int(values[0]))
+                except (TypeError, ValueError):
+                    continue
+
+        if not record_ids:
+            return
+
+        if len(record_ids) == 1:
+            confirm_text = f"Vuoi eliminare il record #{record_ids[0]}?"
+        else:
+            confirm_text = f"Vuoi eliminare {len(record_ids)} record selezionati?"
+
+        if not messagebox.askyesno(
+            "Conferma eliminazione",
+            confirm_text,
+            parent=self.window,
+        ):
+            return
+
+        try:
+            with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+                with closing(conn.cursor()) as cur:
+                    placeholders = ", ".join(["%s"] * len(record_ids))
+                    cur.execute(
+                        f"DELETE FROM {TABLE_NAME} WHERE id IN ({placeholders})",
+                        record_ids,
+                    )
+                    conn.commit()
+                    deleted = cur.rowcount
+        except mysql.connector.Error as exc:
+            messagebox.showerror(
+                "Errore",
+                f"Impossibile eliminare i record:\n{exc}",
+                parent=self.window,
+            )
+            return
+
+        if deleted == 1:
+            success_text = f"Record #{record_ids[0]} eliminato."
+        else:
+            success_text = f"Eliminati {deleted} record."
+
+        messagebox.showinfo(
+            "Eliminazione completata",
+            success_text,
+            parent=self.window,
+        )
+        self._load_data()
 
     def _show_details(self, event) -> None:
         """Mostra i dettagli del record selezionato."""
@@ -1094,6 +1171,7 @@ class DataViewer:
                 DELETE FROM anomalie
                 WHERE data_rilevamento BETWEEN %s AND %s
                   AND tipo_anomalia IN ({placeholder_tipi})
+                  AND COALESCE(stato, 'APERTA') != 'ELIMINATA'
             """
             delete_params: List[Any] = [periodo_da, periodo_a]
             delete_params.extend(tipi_da_pulire)

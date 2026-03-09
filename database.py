@@ -887,67 +887,94 @@ def _ensure_malus_bonus_schema(cur: Any) -> None:
 
 def insert_batch_data(values: List[Tuple]) -> int:
     """
-    Inserisce i dati in batch nel database usando upsert.
-    
+    Inserisce i dati in batch nel database.
+
+    Prima elimina tutti i record esistenti con le stesse combinazioni
+    (data, tipo_attivita) presenti nei dati in arrivo, poi inserisce
+    i nuovi record.  In questo modo un file con meno righe rispetto
+    al caricamento precedente non lascia record "fantasma".
+
     Args:
-        values: Lista di tuple con i dati da inserire (inclusi ore_tim e ore_gestionale)
-        
+        values: Lista di tuple con i dati da inserire
+                (data, codice_preparatore, nome_preparatore, totale_colli,
+                 penalita_eccesso, penalita_difetto, penalita_totale,
+                 tipo_attivita, tipo, ore_tim, ore_gestionale)
+
     Returns:
-        Numero di record inseriti/aggiornati
+        Numero di record inseriti
     """
     if not values:
         return 0
-        
-    sql = f"""
-        INSERT INTO {TABLE_NAME}
-        (data, codice_preparatore, nome_preparatore, totale_colli, penalita_eccesso, penalita_difetto, penalita_totale, tipo_attivita, tipo, ore_tim, ore_gestionale)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-        ON DUPLICATE KEY UPDATE
-            nome_preparatore = VALUES(nome_preparatore),
-            totale_colli     = VALUES(totale_colli),
-            penalita_eccesso = VALUES(penalita_eccesso),
-            penalita_difetto = VALUES(penalita_difetto),
-            penalita_totale  = VALUES(penalita_totale),
-            tipo_attivita    = VALUES(tipo_attivita),
-            tipo             = VALUES(tipo),
-            ore_tim          = VALUES(ore_tim),
-            ore_gestionale   = VALUES(ore_gestionale)
-    """
 
     with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
         with closing(conn.cursor()) as cur:
             try:
+                # ── Salva ore_tim esistenti prima della cancellazione ──
+                keys_to_delete = {(v[0], v[7]) for v in values}  # (data, tipo_attivita)
+                saved_ore_tim: Dict[Tuple, float] = {}
+                for data_val, tipo_att in keys_to_delete:
+                    cur.execute(
+                        f"SELECT data, codice_preparatore, tipo_attivita, ore_tim "
+                        f"FROM {TABLE_NAME} "
+                        f"WHERE data = %s AND tipo_attivita = %s AND ore_tim > 0",
+                        (data_val, tipo_att),
+                    )
+                    for row in cur.fetchall():
+                        key = (row[0], row[1], row[2])  # data, codice, tipo_att
+                        saved_ore_tim[key] = float(row[3])
+
+                if saved_ore_tim:
+                    print(f"[OK] Salvati {len(saved_ore_tim)} valori ore_tim esistenti da preservare")
+
+                # ── Elimina i vecchi record per le stesse (data, tipo_attivita) ──
+                for data_val, tipo_att in keys_to_delete:
+                    cur.execute(
+                        f"DELETE FROM {TABLE_NAME} "
+                        f"WHERE data = %s AND tipo_attivita = %s",
+                        (data_val, tipo_att),
+                    )
+                deleted = cur.rowcount
+                print(f"[OK] Eliminati {deleted} record vecchi per {len(keys_to_delete)} combinazioni (data, tipo_attivita)")
+
+                # ── Inserisce i nuovi record ──
+                sql = f"""
+                    INSERT INTO {TABLE_NAME}
+                    (data, codice_preparatore, nome_preparatore, totale_colli,
+                     penalita_eccesso, penalita_difetto, penalita_totale,
+                     tipo_attivita, tipo, ore_tim, ore_gestionale)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                """
                 cur.executemany(sql, values)
+
+                # ── Ripristina ore_tim dove era già presente ──
+                if saved_ore_tim:
+                    restored = 0
+                    for (data_val, codice, tipo_att), ore in saved_ore_tim.items():
+                        cur.execute(
+                            f"UPDATE {TABLE_NAME} SET ore_tim = %s "
+                            f"WHERE data = %s AND codice_preparatore = %s "
+                            f"AND tipo_attivita = %s AND ore_tim = 0",
+                            (ore, data_val, codice, tipo_att),
+                        )
+                        restored += cur.rowcount
+                    print(f"[OK] Ripristinati {restored}/{len(saved_ore_tim)} valori ore_tim")
+
                 conn.commit()
                 return len(values)
+
             except Exception as e:
-                print("\n[ERROR] Errore durante insert_batch_data:")
-                print(f"   Errore: {e}")
-                print("\n   Tentativo di inserimento riga per riga per trovare il record problematico...")
-                
-                # Prova a inserire riga per riga per trovare il problema
-                for i, val in enumerate(values):
-                    try:
-                        cur.execute(
-                            sql.replace(
-                                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-                                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-                            ),
-                            val,
-                        )
-                        conn.commit()
-                    except Exception as row_error:
-                        print(f"\n[FAIL] Errore alla riga {i}:")
-                        print(f"   Valori: {val}")
-                        print(f"   Tipi: {[type(v).__name__ for v in val]}")
-                        print(f"   Errore: {row_error}")
-                        raise  # Rilancia l'errore originale
-                
-                return len(values)
+                conn.rollback()
+                print(f"\n[ERROR] Errore durante insert_batch_data: {e}")
+                raise
 
 
 def update_penalita_picking(values: List[Tuple[datetime.date, str, float]]) -> int:
     """Aggiorna la penalità totale delle attività PICKING per data e codice preparatore.
+
+    La data di rilevamento (dalla doppia spunta) potrebbe non coincidere con una
+    data in cui il picker ha lavorato. Quando l'UPDATE per la data esatta non trova
+    righe, la penalità viene sommata e assegnata alla prima data disponibile del
+    mese per quel codice picking.
 
     Nota: i campi legacy penalita_eccesso/penalita_difetto vengono azzerati.
     """
@@ -955,35 +982,80 @@ def update_penalita_picking(values: List[Tuple[datetime.date, str, float]]) -> i
     if not values:
         return 0
 
-    sql = f"""
+    # Determina il mese di riferimento dalle date
+    all_dates = [d for (d, _, _) in values]
+    anno = all_dates[0].year
+    mese = all_dates[0].month
+    primo_giorno = datetime.date(anno, mese, 1)
+    if mese == 12:
+        ultimo_giorno = datetime.date(anno + 1, 1, 1) - datetime.timedelta(days=1)
+    else:
+        ultimo_giorno = datetime.date(anno, mese + 1, 1) - datetime.timedelta(days=1)
+
+    # UPDATE penalità PICKING per data e codice preparatore
+    sql_update = f"""
         UPDATE {TABLE_NAME}
-        SET penalita_totale = %s,
+        SET penalita_totale = penalita_totale + %s,
             penalita_eccesso = 0,
             penalita_difetto = 0
         WHERE data = %s
           AND codice_preparatore = %s
-          AND tipo_attivita = %s
+          AND tipo_attivita = 'PICKING'
     """
 
-    # Prima azzera le penalità PICKING per le date coinvolte,
-    # così non restano valori "vecchi" su codici non presenti in questa importazione.
-    unique_dates = sorted({d for (d, _, _) in values})
+    # Trova la prima data PICKING valida nel mese per un codice
+    # Preferisce date con ore_tim > 0 (senza anomalie PRODUZIONE_SENZA_ORE)
+    sql_find_date = f"""
+        SELECT data AS first_date
+        FROM {TABLE_NAME}
+        WHERE codice_preparatore = %s
+          AND tipo_attivita = 'PICKING'
+          AND data BETWEEN %s AND %s
+        ORDER BY (ore_tim > 0) DESC, data ASC
+        LIMIT 1
+    """
+
+    # Azzera TUTTE le penalità PICKING del mese
     reset_sql = (
         f"UPDATE {TABLE_NAME} "
         "SET penalita_totale = 0, penalita_eccesso = 0, penalita_difetto = 0 "
-        "WHERE tipo_attivita = %s AND data IN (" + ",".join(["%s"] * len(unique_dates)) + ")"
+        "WHERE tipo_attivita = 'PICKING' AND data BETWEEN %s AND %s"
     )
 
     with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
-        with closing(conn.cursor()) as cur:
-            cur.execute(reset_sql, tuple(["PICKING", *unique_dates]))
+        with closing(conn.cursor(dictionary=True)) as cur:
+            # Reset tutte le penalità PICKING del mese
+            cur.execute(reset_sql, (primo_giorno, ultimo_giorno))
+
             updated_total = 0
+            # Penalità non assegnate: (codice -> penalità accumulata)
+            unassigned: Dict[str, float] = {}
+
             for data, codice, penalita_totale in values:
                 pen = float(penalita_totale or 0)
+                if pen == 0:
+                    continue
 
-                cur.execute(sql, (pen, data, codice, "PICKING"))
+                # Prova ad assegnare alla data esatta
+                cur.execute(sql_update, (pen, data, codice))
                 if cur.rowcount > 0:
                     updated_total += cur.rowcount
+                else:
+                    # Accumula per assegnazione successiva
+                    unassigned[codice] = unassigned.get(codice, 0) + pen
+
+            # Assegna le penalità rimaste alla prima data disponibile nel mese
+            for codice, pen in unassigned.items():
+                cur.execute(sql_find_date, (codice, primo_giorno, ultimo_giorno))
+                row = cur.fetchone()
+                first_date = row.get("first_date") if row else None
+                if first_date:
+                    cur.execute(sql_update, (pen, first_date, codice))
+                    if cur.rowcount > 0:
+                        updated_total += cur.rowcount
+                        print(f"[INFO] Penalita PICKING {codice}: {pen} assegnata a {first_date} (data rilevamento non disponibile)")
+                else:
+                    print(f"[WARN] Penalita PICKING {codice}: {pen} NON assegnata (nessun record PICKING nel mese)")
 
             conn.commit()
     return updated_total
@@ -1008,6 +1080,7 @@ def get_penalita_picking_from_sessioni(dates: List[datetime.date]) -> List[Tuple
         WHERE data IN ({placeholders})
                     AND penalita <> 0
                     AND qtasped IS NOT NULL
+                    AND qtasped <> 0
           AND altro_codice IS NOT NULL
           AND TRIM(altro_codice) <> ''
         GROUP BY data, codice_picking
@@ -1398,12 +1471,27 @@ def insert_anomalia(
     dettagli: Optional[str] = None,
     note: Optional[str] = None,
 ) -> int:
-    """Inserisce una nuova anomalia."""
+    """Inserisce una nuova anomalia. Se esiste già una ELIMINATA per la stessa combinazione, la salta."""
     with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
         with closing(conn.cursor()) as cur:
             # Estrae anno e mese dalla data di rilevamento
             anno = data_rilevamento.year
             mese = data_rilevamento.month
+
+            # Se esiste già un record ELIMINATA per la stessa combinazione, non re-inserire
+            cur.execute(
+                """
+                SELECT id FROM anomalie
+                WHERE tipo_anomalia = %s
+                  AND data_rilevamento = %s
+                  AND codice_preparatore = %s
+                  AND COALESCE(tipo_attivita, '') = COALESCE(%s, '')
+                  AND stato = 'ELIMINATA'
+                """,
+                (tipo_anomalia, data_rilevamento, codice_preparatore, tipo_attivita),
+            )
+            if cur.fetchone():
+                return 0  # Record già eliminato dall'utente, non rigenerare
             
             cur.execute(
                 """
@@ -1442,7 +1530,7 @@ def fetch_anomalie(
     """Recupera le anomalie con filtri opzionali. tipo_anomalia può essere una stringa o una lista."""
     with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
         with closing(conn.cursor(dictionary=True)) as cur:
-            conditions: List[str] = []
+            conditions: List[str] = ["COALESCE(stato, 'APERTA') != 'ELIMINATA'"]
             params: List[Any] = []
 
             if tipo_anomalia:
@@ -1518,10 +1606,13 @@ def fetch_attivita_tim(
             query = """
                 SELECT
                     a.id AS attivita_id,
+                    a.utente_id,
                     ta.id AS tipo_attivita_id,
                     ta.descrizione AS attivita,
                     a.data_inizio,
                     a.data_fine,
+                    a.data_riferimento,
+                    a.pausa,
                     GREATEST(
                         TIMESTAMPDIFF(MINUTE, a.data_inizio, a.data_fine) - COALESCE(a.pausa, 0),
                         0
@@ -1555,6 +1646,42 @@ def fetch_tipi_attivita_tim() -> List[Dict[str, Any]]:
             return cast(List[Dict[str, Any]], rows)
 
 
+def fetch_pause_by_attivita_ids(
+    attivita_ids: List[int],
+) -> Dict[int, List[Dict[str, Any]]]:
+    """Recupera le pause raggruppate per attivita_id."""
+    if not attivita_ids:
+        return {}
+
+    with closing(mysql.connector.connect(**MYSQL_CONFIG_MAIN)) as conn:
+        with closing(conn.cursor(dictionary=True)) as cur:
+            placeholders = ", ".join(["%s"] * len(attivita_ids))
+            cur.execute(
+                f"""
+                SELECT
+                    p.id AS pausa_id,
+                    p.attivita_id,
+                    p.descrizione,
+                    p.data_inizio,
+                    p.data_fine,
+                    p.durata,
+                    p.pagata
+                FROM pausa p
+                WHERE p.attivita_id IN ({placeholders})
+                ORDER BY p.attivita_id, p.data_inizio
+                """,
+                tuple(attivita_ids),
+            )
+            rows = cur.fetchall() or []
+            result: Dict[int, List[Dict[str, Any]]] = {}
+            for row in rows:
+                aid = int(row["attivita_id"])
+                if aid not in result:
+                    result[aid] = []
+                result[aid].append(row)
+            return result
+
+
 def update_attivita_tim(attivita_id: int, tipo_attivita_id: int) -> None:
     """Aggiorna il tipo attività di una singola attività su TIM."""
     with closing(mysql.connector.connect(**MYSQL_CONFIG_MAIN)) as conn:
@@ -1568,6 +1695,322 @@ def update_attivita_tim(attivita_id: int, tipo_attivita_id: int) -> None:
                 (tipo_attivita_id, attivita_id),
             )
             conn.commit()
+
+
+def split_attivita_tim(
+    original_id: int,
+    part1_fine: datetime.datetime,
+    part1_tipo_attivita_id: Optional[int] = None,
+) -> int:
+    """Spezza un'attività TIM in due parti.
+
+    La riga originale (Parte 1) viene aggiornata con data_fine = part1_fine.
+    Se part1_tipo_attivita_id è specificato, la Parte 1 cambia tipo attività.
+    La Parte 2 (nuovo record) mantiene il tipo attività originale.
+    La durata viene ricalcolata per entrambe le parti.
+    Le pause vengono riassegnate al record corretto in base agli orari.
+
+    Ritorna l'id della nuova riga inserita.
+    """
+    with closing(mysql.connector.connect(**MYSQL_CONFIG_MAIN)) as conn:
+        with closing(conn.cursor(dictionary=True)) as cur:
+            try:
+                cur.execute(
+                    """SELECT * FROM attivita WHERE id = %s""",
+                    (original_id,),
+                )
+                original = cur.fetchone()
+                if not original:
+                    raise ValueError(f"Attività con id={original_id} non trovata.")
+
+                orig_inizio = original["data_inizio"]
+                orig_fine = original["data_fine"]
+
+                if part1_fine <= orig_inizio:
+                    raise ValueError(
+                        "La fine della Parte 1 deve essere successiva "
+                        "all'inizio dell'attività originale."
+                    )
+                if part1_fine >= orig_fine:
+                    raise ValueError(
+                        "La fine della Parte 1 deve essere precedente "
+                        "alla fine dell'attività originale."
+                    )
+
+                # ── Recupera le pause legate all'attività originale ──
+                cur.execute(
+                    """SELECT * FROM pausa WHERE attivita_id = %s
+                       ORDER BY data_inizio""",
+                    (original_id,),
+                )
+                pause_rows = cur.fetchall() or []
+
+                # Suddividi le pause: quelle che iniziano PRIMA di part1_fine
+                # restano sulla Parte 1, le altre vanno sulla Parte 2
+                pause_part1 = []
+                pause_part2 = []
+                for p in pause_rows:
+                    p_inizio = p.get("data_inizio")
+                    if p_inizio and p_inizio >= part1_fine:
+                        pause_part2.append(p)
+                    else:
+                        pause_part1.append(p)
+
+                # ── Calcola pausa e durata per ciascuna parte ──
+                # Solo le pause NON pagate (es. pranzo) vengono sottratte
+                # dalla durata. Le pause pagate non incidono sul calcolo.
+                pausa_min_part1 = sum(
+                    int(p.get("durata") or 0)
+                    for p in pause_part1
+                    if not p.get("pagata")
+                )
+                pausa_min_part2 = sum(
+                    int(p.get("durata") or 0)
+                    for p in pause_part2
+                    if not p.get("pagata")
+                )
+
+                durata_part1 = max(
+                    int((part1_fine - orig_inizio).total_seconds() // 60) - pausa_min_part1,
+                    0,
+                )
+                durata_part2 = max(
+                    int((orig_fine - part1_fine).total_seconds() // 60) - pausa_min_part2,
+                    0,
+                )
+
+                # ── Determina tipo attività per Parte 1 (se cambiato) ──
+                p1_tipo_id = part1_tipo_attivita_id or original.get("tipo_attivita_id")
+                p1_descrizione = original.get("descrizione")
+                if part1_tipo_attivita_id and part1_tipo_attivita_id != original.get("tipo_attivita_id"):
+                    cur.execute(
+                        "SELECT descrizione FROM tipoattivita WHERE id = %s",
+                        (part1_tipo_attivita_id,),
+                    )
+                    tipo_row = cur.fetchone()
+                    if tipo_row:
+                        p1_descrizione = tipo_row.get("descrizione")
+
+                # ── UPDATE record originale (Parte 1) ──
+                cur.execute(
+                    """
+                    UPDATE attivita
+                    SET data_fine = %s,
+                        durata = %s,
+                        pausa = %s,
+                        tipo_attivita_id = %s,
+                        descrizione = %s,
+                        chiusura_giornata = 0
+                    WHERE id = %s
+                    """,
+                    (part1_fine, durata_part1, pausa_min_part1,
+                     p1_tipo_id, p1_descrizione, original_id),
+                )
+
+                # ── INSERT nuovo record (Parte 2) copiando tutti i campi ──
+                new_id = _generate_tim_long_id("001")
+                cur.execute(
+                    """
+                    INSERT INTO attivita
+                        (id, utente_id, buonoattivitaextra_id,
+                         location_id, descrizione, data_riferimento,
+                         data_inizio, data_fine,
+                         codice_terminale, terminale_id,
+                         squadra_id, reparto_id, tipo_attivita_id,
+                         tag_produzione_id, tag_valore, tag_note,
+                         tag_aggiornamento, tag_ultima,
+                         mezzo_id, device_id, codice_gestionale_id,
+                         durata, pausa, note, stato_id,
+                         apertura_giornata, chiusura_giornata,
+                         origine, attivita_id_provenienza,
+                         utente_modifica)
+                    VALUES (%s, %s, %s,
+                            %s, %s, %s,
+                            %s, %s,
+                            %s, %s,
+                            %s, %s, %s,
+                            %s, %s, %s,
+                            %s, %s,
+                            %s, %s, %s,
+                            %s, %s, %s, %s,
+                            %s, %s,
+                            %s, %s,
+                            %s)
+                    """,
+                    (
+                        new_id,
+                        original["utente_id"],
+                        original.get("buonoattivitaextra_id"),
+                        original.get("location_id"),
+                        original.get("descrizione"),
+                        original.get("data_riferimento"),
+                        part1_fine,                       # data_inizio = fine parte 1
+                        orig_fine,                        # data_fine   = fine originale
+                        original.get("codice_terminale"),
+                        original.get("terminale_id"),
+                        original.get("squadra_id"),
+                        original.get("reparto_id"),
+                        original.get("tipo_attivita_id"),
+                        original.get("tag_produzione_id"),
+                        original.get("tag_valore"),
+                        original.get("tag_note"),
+                        original.get("tag_aggiornamento"),
+                        original.get("tag_ultima"),
+                        original.get("mezzo_id"),
+                        original.get("device_id"),
+                        original.get("codice_gestionale_id"),
+                        durata_part2,
+                        pausa_min_part2,
+                        original.get("note"),
+                        original.get("stato_id"),
+                        0,                                # apertura_giornata = 0
+                        original.get("chiusura_giornata"),
+                        original.get("origine"),
+                        original_id,                      # attivita_id_provenienza
+                        original.get("utente_modifica"),
+                    ),
+                )
+
+                # ── Sposta le pause della Parte 2 sul nuovo record ──
+                if pause_part2:
+                    pause_ids = [p["id"] for p in pause_part2]
+                    placeholders = ", ".join(["%s"] * len(pause_ids))
+                    cur.execute(
+                        f"""
+                        UPDATE pausa
+                        SET attivita_id = %s
+                        WHERE id IN ({placeholders})
+                        """,
+                        [new_id] + pause_ids,
+                    )
+
+                conn.commit()
+                return new_id
+
+            except ValueError:
+                conn.rollback()
+                raise
+            except Exception:
+                conn.rollback()
+                raise
+
+
+def ripristina_attivita_tim(selected_id: int) -> None:
+    """Ripristina un'attività spezzata riunendo le due parti.
+
+    Accetta l'id di una qualsiasi delle due parti (originale o derivata).
+    Trova la coppia tramite attivita_id_provenienza, riporta il record
+    originale (Parte 1) alla data_fine della Parte 2, sposta le pause
+    della Parte 2 sul record originale, ricalcola durata e pausa,
+    e infine elimina il record derivato (Parte 2).
+    """
+    with closing(mysql.connector.connect(**MYSQL_CONFIG_MAIN)) as conn:
+        with closing(conn.cursor(dictionary=True)) as cur:
+            try:
+                # ── Trova la coppia originale + derivato ──
+                # Caso 1: l'utente ha selezionato il record derivato (Parte 2)
+                cur.execute(
+                    "SELECT * FROM attivita WHERE id = %s",
+                    (selected_id,),
+                )
+                selected = cur.fetchone()
+                if not selected:
+                    raise ValueError(f"Attività con id={selected_id} non trovata.")
+
+                provenienza = selected.get("attivita_id_provenienza")
+
+                if provenienza:
+                    # Il record selezionato È la Parte 2
+                    derivato = selected
+                    cur.execute(
+                        "SELECT * FROM attivita WHERE id = %s",
+                        (provenienza,),
+                    )
+                    originale = cur.fetchone()
+                    if not originale:
+                        raise ValueError(
+                            f"Record originale (id={provenienza}) non trovato."
+                        )
+                else:
+                    # Caso 2: l'utente ha selezionato il record originale (Parte 1)
+                    originale = selected
+                    cur.execute(
+                        "SELECT * FROM attivita WHERE attivita_id_provenienza = %s "
+                        "ORDER BY data_inizio LIMIT 1",
+                        (selected_id,),
+                    )
+                    derivato = cur.fetchone()
+                    if not derivato:
+                        raise ValueError(
+                            "Nessun record derivato trovato. "
+                            "Questa attività non è stata spezzata."
+                        )
+
+                orig_id = originale["id"]
+                deriv_id = derivato["id"]
+
+                # ── Sposta tutte le pause del derivato sull'originale ──
+                cur.execute(
+                    "UPDATE pausa SET attivita_id = %s WHERE attivita_id = %s",
+                    (orig_id, deriv_id),
+                )
+
+                # ── Ricalcola pausa (solo non pagate) e durata ──
+                cur.execute(
+                    "SELECT durata, pagata FROM pausa WHERE attivita_id = %s",
+                    (orig_id,),
+                )
+                pause_rows = cur.fetchall() or []
+                pausa_totale = sum(
+                    int(p.get("durata") or 0)
+                    for p in pause_rows
+                    if not p.get("pagata")
+                )
+
+                orig_inizio = originale["data_inizio"]
+                deriv_fine = derivato["data_fine"]
+                durata_totale = max(
+                    int((deriv_fine - orig_inizio).total_seconds() // 60) - pausa_totale,
+                    0,
+                )
+
+                # ── Ripristina il record originale ──
+                cur.execute(
+                    """
+                    UPDATE attivita
+                    SET data_fine = %s,
+                        durata = %s,
+                        pausa = %s,
+                        tipo_attivita_id = %s,
+                        descrizione = %s,
+                        chiusura_giornata = %s
+                    WHERE id = %s
+                    """,
+                    (
+                        deriv_fine,
+                        durata_totale,
+                        pausa_totale,
+                        derivato.get("tipo_attivita_id"),
+                        derivato.get("descrizione"),
+                        derivato.get("chiusura_giornata"),
+                        orig_id,
+                    ),
+                )
+
+                # ── Elimina il record derivato ──
+                cur.execute(
+                    "DELETE FROM attivita WHERE id = %s",
+                    (deriv_id,),
+                )
+
+                conn.commit()
+
+            except ValueError:
+                conn.rollback()
+                raise
+            except Exception:
+                conn.rollback()
+                raise
 
 
 def fetch_report_templates(
@@ -2035,25 +2478,25 @@ def delete_premi_doppia_spunta(anno: int, mese: int) -> None:
 
 
 def delete_anomalia(anomalia_id: int) -> None:
-    """Elimina un'anomalia."""
+    """Soft-delete un'anomalia (imposta stato = 'ELIMINATA')."""
     with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
         with closing(conn.cursor()) as cur:
-            cur.execute("DELETE FROM anomalie WHERE id = %s", (anomalia_id,))
+            cur.execute("UPDATE anomalie SET stato = 'ELIMINATA' WHERE id = %s", (anomalia_id,))
             conn.commit()
 
 
 def clear_anomalie_by_date(data_rilevamento: datetime.date, tipo_anomalia: Optional[str] = None) -> int:
-    """Elimina anomalie per una data specifica (utile prima di rigenerare)."""
+    """Elimina anomalie per una data specifica (utile prima di rigenerare). Preserva le ELIMINATA."""
     with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
         with closing(conn.cursor()) as cur:
             if tipo_anomalia:
                 cur.execute(
-                    "DELETE FROM anomalie WHERE data_rilevamento = %s AND tipo_anomalia = %s",
+                    "DELETE FROM anomalie WHERE data_rilevamento = %s AND tipo_anomalia = %s AND COALESCE(stato, 'APERTA') != 'ELIMINATA'",
                     (data_rilevamento, tipo_anomalia),
                 )
             else:
                 cur.execute(
-                    "DELETE FROM anomalie WHERE data_rilevamento = %s",
+                    "DELETE FROM anomalie WHERE data_rilevamento = %s AND COALESCE(stato, 'APERTA') != 'ELIMINATA'",
                     (data_rilevamento,),
                 )
             conn.commit()

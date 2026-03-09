@@ -3,6 +3,7 @@ import datetime
 from contextlib import closing
 from decimal import Decimal, ROUND_HALF_UP
 import os
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, cast
 
@@ -49,6 +50,7 @@ class PremiPreparatoriView(tk.Frame):
         self.mese_var = tk.StringVar(value=MONTH_CHOICES[today.month - 1][0])
         self.codice_var = tk.StringVar()
         self._current_premi: List[Dict[str, Any]] = []
+        self._sort_reverse: Dict[str, bool] = {}
 
         self._build_ui()
         self._carica_premi()
@@ -200,7 +202,7 @@ class PremiPreparatoriView(tk.Frame):
         self._tree_headers = headers
 
         for col, title in headers.items():
-            self.tree.heading(col, text=title)
+            self.tree.heading(col, text=title, command=lambda c=col: self._sort_by_column(c))
 
         self.tree.column("codice", width=90, anchor="center")
         self.tree.column("nome", width=180, anchor="w")
@@ -230,6 +232,39 @@ class PremiPreparatoriView(tk.Frame):
         )
         self.stats_label.pack(side="left", padx=12, pady=10)
 
+    # --------------------------------------------------------- ORDINAMENTO ---
+    def _sort_by_column(self, col: str) -> None:
+        """Ordina la tabella in base alla colonna selezionata."""
+        reverse = self._sort_reverse.get(col, False)
+        items = list(self.tree.get_children(""))
+
+        def sort_key(item_id: str):
+            value = self.tree.set(item_id, col)
+            return self._coerce_sort_value(value)
+
+        items.sort(key=sort_key, reverse=reverse)
+
+        for index, item_id in enumerate(items):
+            self.tree.move(item_id, "", index)
+
+        self._sort_reverse[col] = not reverse
+
+    @staticmethod
+    def _coerce_sort_value(value):
+        if value is None:
+            return (1, "")
+        text = str(value).strip()
+        if not text:
+            return (1, "")
+        normalized = text.replace(" ", "")
+        if re.match(r"^-?\d{1,3}(\.\d{3})*(,\d+)?$", normalized):
+            normalized = normalized.replace(".", "").replace(",", ".")
+        elif re.match(r"^-?\d+([\.,]\d+)?$", normalized):
+            normalized = normalized.replace(",", ".")
+        try:
+            return (0, float(normalized))
+        except ValueError:
+            return (0, text.lower())
 
     def _export_premi_excel(self) -> None:
         """Esporta l'elenco premi corrente in Excel."""
@@ -568,10 +603,9 @@ class PremiPreparatoriView(tk.Frame):
             soglia_rot = Decimal(str(record.get("soglia_rotture", 0) or 0))
             soglia_diff = Decimal(str(record.get("soglia_differenze", 0) or 0))
 
-            totale = rotture + differenze
-            soglia_totale = soglia_rot + soglia_diff
-
-            if soglia_totale > 0 and totale < soglia_totale:
+            # Il bonus scatta solo se ENTRAMBE le soglie sono rispettate
+            # (verifica separata, non aggregata)
+            if rotture <= soglia_rot and differenze <= soglia_diff:
                 return Decimal("0.15")
         except Exception:
             return None

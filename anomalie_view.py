@@ -23,6 +23,9 @@ from database import (
     insert_codice_gestionale_tim,
     resolve_anomalie_codice_non_abbinato,
     search_utenti_tim,
+    split_attivita_tim,
+    ripristina_attivita_tim,
+    fetch_pause_by_attivita_ids,
     update_anomalia_stato,
     update_attivita_tim,
     update_codice_gestionale_tim,
@@ -455,7 +458,10 @@ class AnomalieView:
 
         dialog = tk.Toplevel(self.dialog_parent)
         dialog.title("Attività TIM")
-        dialog.geometry("760x420")
+        dlg_w, dlg_h = 1050, 460
+        scr_w = dialog.winfo_screenwidth()
+        scr_h = dialog.winfo_screenheight()
+        dialog.geometry(f"{dlg_w}x{dlg_h}+{(scr_w - dlg_w) // 2}+{(scr_h - dlg_h) // 2}")
         dialog.configure(bg=COLORS["background"])
 
         header = tk.Frame(dialog, bg=COLORS["background"])
@@ -515,7 +521,7 @@ class AnomalieView:
         )
         table_frame.pack(fill="both", expand=True, padx=16, pady=(0, 12))
 
-        columns = ("attivita_id", "tipo_id", "attivita", "inizio", "fine", "ore")
+        columns = ("attivita_id", "tipo_id", "attivita", "inizio", "fine", "ore", "pausa_min", "pagata", "pranzo")
         tree = ttk.Treeview(table_frame, columns=columns, show="headings")
 
         tree.heading("attivita_id", text="ID")
@@ -524,13 +530,19 @@ class AnomalieView:
         tree.heading("inizio", text="Inizio")
         tree.heading("fine", text="Fine")
         tree.heading("ore", text="Ore")
+        tree.heading("pausa_min", text="Pausa (min)")
+        tree.heading("pagata", text="Pausa Pagata")
+        tree.heading("pranzo", text="Pausa Pranzo")
 
         tree.column("attivita_id", width=0, stretch=False)
         tree.column("tipo_id", width=0, stretch=False)
-        tree.column("attivita", width=220, anchor="w")
-        tree.column("inizio", width=140, anchor="center")
-        tree.column("fine", width=140, anchor="center")
-        tree.column("ore", width=100, anchor="center")
+        tree.column("attivita", width=180, anchor="w")
+        tree.column("inizio", width=70, anchor="center")
+        tree.column("fine", width=70, anchor="center")
+        tree.column("ore", width=60, anchor="center")
+        tree.column("pausa_min", width=80, anchor="center")
+        tree.column("pagata", width=150, anchor="center")
+        tree.column("pranzo", width=150, anchor="center")
 
         vsb = ttk.Scrollbar(table_frame, orient="vertical", command=tree.yview)
         tree.configure(yscrollcommand=vsb.set)
@@ -540,8 +552,15 @@ class AnomalieView:
         def refresh_attivita_rows() -> None:
             tree.delete(*tree.get_children())
             if not attivita_rows:
-                tree.insert("", "end", values=("", "", "Nessuna attività trovata", "", "", ""))
+                tree.insert("", "end", values=("", "", "Nessuna attività trovata", "", "", "", "", "", ""))
                 return
+
+            # Recupera le pause dalla tabella pausa
+            att_ids = [int(r["attivita_id"]) for r in attivita_rows if r.get("attivita_id")]
+            try:
+                pause_map = fetch_pause_by_attivita_ids(att_ids) if att_ids else {}
+            except Exception:
+                pause_map = {}
 
             for row in attivita_rows:
                 attivita_id = row.get("attivita_id")
@@ -550,15 +569,34 @@ class AnomalieView:
                 inizio = row.get("data_inizio")
                 fine = row.get("data_fine")
                 minuti = row.get("durata_minuti") or 0
+                pausa_min = row.get("pausa")
 
                 inizio_str = inizio.strftime("%H:%M") if hasattr(inizio, "strftime") else str(inizio or "")
                 fine_str = fine.strftime("%H:%M") if hasattr(fine, "strftime") else str(fine or "")
                 ore_str = f"{float(minuti) / 60:.2f}" if minuti is not None else ""
+                pausa_min_str = str(pausa_min) if pausa_min is not None else ""
+
+                # Orari pausa dalla tabella pausa, separati per tipo
+                pause_list = pause_map.get(int(attivita_id), []) if attivita_id else []
+                pagata_parts = []
+                pranzo_parts = []
+                for p in pause_list:
+                    pi = p.get("data_inizio")
+                    pf = p.get("data_fine")
+                    pi_str = pi.strftime("%H:%M") if hasattr(pi, "strftime") else str(pi or "")
+                    pf_str = pf.strftime("%H:%M") if hasattr(pf, "strftime") else str(pf or "")
+                    orario = f"{pi_str}-{pf_str}"
+                    if p.get("pagata"):
+                        pagata_parts.append(orario)
+                    else:
+                        pranzo_parts.append(orario)
+                pagata_str = " / ".join(pagata_parts)
+                pranzo_str = " / ".join(pranzo_parts)
 
                 tree.insert(
                     "",
                     "end",
-                    values=(attivita_id, tipo_id, attivita, inizio_str, fine_str, ore_str),
+                    values=(attivita_id, tipo_id, attivita, inizio_str, fine_str, ore_str, pausa_min_str, pagata_str, pranzo_str),
                 )
 
         refresh_attivita_rows()
@@ -620,6 +658,209 @@ class AnomalieView:
                     parent=dialog,
                 )
 
+        def on_split_attivita() -> None:
+            selection = tree.selection()
+            if not selection:
+                messagebox.showwarning(
+                    "Selezione mancante",
+                    "Seleziona una riga da spezzare.",
+                    parent=dialog,
+                )
+                return
+
+            item = tree.item(selection[0])
+            values = item.get("values") or []
+            if len(values) < 6:
+                return
+
+            sel_attivita_id = values[0]
+            if not sel_attivita_id:
+                return
+
+            row_data = None
+            for r in attivita_rows:
+                if r.get("attivita_id") == int(sel_attivita_id):
+                    row_data = r
+                    break
+            if not row_data:
+                messagebox.showerror(
+                    "Errore",
+                    "Impossibile trovare i dati dell'attività selezionata.",
+                    parent=dialog,
+                )
+                return
+
+            orig_inizio = row_data["data_inizio"]
+            orig_fine = row_data["data_fine"]
+            orig_attivita_desc = row_data.get("attivita") or ""
+            orig_pausa = row_data.get("pausa")
+
+            split_dlg = tk.Toplevel(dialog)
+            split_dlg.title("Spezza Attività")
+            sp_w, sp_h = 460, 280
+            sp_sw = split_dlg.winfo_screenwidth()
+            sp_sh = split_dlg.winfo_screenheight()
+            split_dlg.geometry(f"{sp_w}x{sp_h}+{(sp_sw - sp_w) // 2}+{(sp_sh - sp_h) // 2}")
+            split_dlg.configure(bg=COLORS["background"])
+            split_dlg.transient(dialog)
+            split_dlg.grab_set()
+
+            info_frame = tk.Frame(split_dlg, bg=COLORS["background"])
+            info_frame.pack(fill="x", padx=16, pady=(12, 8))
+
+            inizio_display = orig_inizio.strftime("%H:%M") if hasattr(orig_inizio, "strftime") else str(orig_inizio)
+            fine_display = orig_fine.strftime("%H:%M") if hasattr(orig_fine, "strftime") else str(orig_fine)
+            pausa_display = f" | Pausa: {orig_pausa} min" if orig_pausa else ""
+
+            tk.Label(
+                info_frame,
+                text=f"Attività: {orig_attivita_desc}",
+                font=FONTS["big"],
+                bg=COLORS["background"],
+                fg=COLORS.get("text_dark", "#222"),
+            ).pack(anchor="w")
+            tk.Label(
+                info_frame,
+                text=f"Orario: {inizio_display} - {fine_display}{pausa_display}",
+                font=FONTS.get("subtitle", ("Segoe UI", 10)),
+                bg=COLORS["background"],
+                fg=COLORS.get("text_light", "#666"),
+            ).pack(anchor="w", pady=(2, 0))
+
+            form_frame = tk.Frame(split_dlg, bg=COLORS["background"])
+            form_frame.pack(fill="x", padx=16, pady=(4, 8))
+
+            tk.Label(
+                form_frame, text="Spezza alle (HH:MM):",
+                font=FONTS["label"], bg=COLORS["background"],
+            ).grid(row=0, column=0, sticky="w", pady=4)
+
+            part1_fine_var = tk.StringVar()
+            ttk.Entry(
+                form_frame, textvariable=part1_fine_var, width=8,
+                font=FONTS.get("input", FONTS.get("label")),
+            ).grid(row=0, column=1, sticky="w", padx=(8, 0), pady=4)
+
+            tk.Label(
+                form_frame, text="Attività spezzata:",
+                font=FONTS["label"], bg=COLORS["background"],
+            ).grid(row=1, column=0, sticky="w", pady=4)
+
+            split_tipo_var = tk.StringVar(value=orig_attivita_desc)
+            split_tipo_combo = ttk.Combobox(
+                form_frame,
+                textvariable=split_tipo_var,
+                values=list(tipi_by_desc.keys()),
+                state="readonly" if tipi_by_desc else "disabled",
+                font=FONTS.get("input", FONTS.get("label")),
+                width=28,
+            )
+            split_tipo_combo.grid(row=1, column=1, sticky="w", padx=(8, 0), pady=4)
+
+            tk.Label(
+                form_frame,
+                text="Le pause verranno riassegnate automaticamente.",
+                font=FONTS.get("subtitle", ("Segoe UI", 9)),
+                bg=COLORS["background"],
+                fg=COLORS.get("text_light", "#888"),
+            ).grid(row=2, column=0, columnspan=2, sticky="w", pady=(4, 0))
+
+            btn_frame = tk.Frame(split_dlg, bg=COLORS["background"])
+            btn_frame.pack(fill="x", padx=16, pady=(8, 12))
+
+            def on_confirm_split():
+                p1_fine_str = part1_fine_var.get().strip()
+
+                if not p1_fine_str:
+                    messagebox.showwarning(
+                        "Campo obbligatorio",
+                        "Inserisci l'orario in cui spezzare l'attività.",
+                        parent=split_dlg,
+                    )
+                    return
+
+                time_pattern = re.compile(r"^(\d{1,2}):(\d{2})$")
+                m1 = time_pattern.match(p1_fine_str)
+                if not m1:
+                    messagebox.showwarning(
+                        "Formato non valido",
+                        "Usa il formato HH:MM per l'orario.",
+                        parent=split_dlg,
+                    )
+                    return
+
+                ref_date = orig_inizio.date() if hasattr(orig_inizio, "date") else data_ril
+                try:
+                    p1_fine_dt = datetime.datetime.combine(
+                        ref_date,
+                        datetime.time(int(m1.group(1)), int(m1.group(2))),
+                    )
+                except ValueError as ve:
+                    messagebox.showwarning(
+                        "Orario non valido", str(ve), parent=split_dlg,
+                    )
+                    return
+
+                # Tipo attività per la parte spezzata (Parte 1)
+                selected_tipo_desc = split_tipo_var.get().strip()
+                p1_tipo_id = tipi_by_desc.get(selected_tipo_desc)
+                tipo_p1_label = selected_tipo_desc or orig_attivita_desc
+
+                confirm = messagebox.askyesno(
+                    "Conferma Spezzatura",
+                    f"Parte 1: {inizio_display} - {p1_fine_str}  ({tipo_p1_label})\n"
+                    f"Parte 2: {p1_fine_str} - {fine_display}  ({orig_attivita_desc})\n\n"
+                    f"Le pause verranno riassegnate automaticamente.\n"
+                    f"Procedere?",
+                    parent=split_dlg,
+                )
+                if not confirm:
+                    return
+
+                try:
+                    split_attivita_tim(
+                        original_id=int(sel_attivita_id),
+                        part1_fine=p1_fine_dt,
+                        part1_tipo_attivita_id=p1_tipo_id,
+                    )
+                except ValueError as ve:
+                    messagebox.showwarning(
+                        "Validazione fallita", str(ve), parent=split_dlg,
+                    )
+                    return
+                except Exception as exc:
+                    messagebox.showerror(
+                        "Errore",
+                        f"Impossibile spezzare l'attività:\n{exc}",
+                        parent=split_dlg,
+                    )
+                    return
+
+                try:
+                    refreshed = fetch_attivita_tim(codice, data_ril)
+                    attivita_rows.clear()
+                    attivita_rows.extend(refreshed)
+                    refresh_attivita_rows()
+                except Exception:
+                    pass
+
+                split_dlg.destroy()
+                messagebox.showinfo(
+                    "Operazione completata",
+                    "Attività spezzata con successo.",
+                    parent=dialog,
+                )
+
+            create_button(
+                btn_frame, text="Conferma", command=on_confirm_split,
+                variant="primary", width=12,
+            ).pack(side="left", padx=(0, 8))
+
+            create_button(
+                btn_frame, text="Annulla", command=split_dlg.destroy,
+                variant="secondary", width=12,
+            ).pack(side="left")
+
         create_button(
             editor_frame,
             text="Aggiorna",
@@ -627,6 +868,82 @@ class AnomalieView:
             variant="primary",
             width=12,
         ).pack(side="left")
+
+        create_button(
+            editor_frame,
+            text="Spezza",
+            command=on_split_attivita,
+            variant="secondary",
+            width=12,
+        ).pack(side="left", padx=(8, 0))
+
+        def on_ripristina_attivita() -> None:
+            selection = tree.selection()
+            if not selection:
+                messagebox.showwarning(
+                    "Selezione mancante",
+                    "Seleziona una riga da ripristinare.",
+                    parent=dialog,
+                )
+                return
+
+            item = tree.item(selection[0])
+            values = item.get("values") or []
+            if len(values) < 6:
+                return
+
+            sel_attivita_id = values[0]
+            if not sel_attivita_id:
+                return
+
+            confirm = messagebox.askyesno(
+                "Conferma Ripristino",
+                "Riunire le parti spezzate dell'attività selezionata?\n\n"
+                "Il record derivato verrà eliminato e l'originale\n"
+                "ripristinato con gli orari completi.",
+                parent=dialog,
+            )
+            if not confirm:
+                return
+
+            try:
+                ripristina_attivita_tim(int(sel_attivita_id))
+            except ValueError as ve:
+                messagebox.showwarning(
+                    "Ripristino non possibile",
+                    str(ve),
+                    parent=dialog,
+                )
+                return
+            except Exception as exc:
+                messagebox.showerror(
+                    "Errore",
+                    f"Impossibile ripristinare l'attività:\n{exc}",
+                    parent=dialog,
+                )
+                return
+
+            try:
+                refreshed = fetch_attivita_tim(codice, data_ril)
+                attivita_rows.clear()
+                attivita_rows.extend(refreshed)
+                refresh_attivita_rows()
+            except Exception:
+                pass
+
+            messagebox.showinfo(
+                "Operazione completata",
+                "Attività ripristinata con successo.",
+                parent=dialog,
+            )
+
+        create_button(
+            editor_frame,
+            text="Ripristina",
+            command=on_ripristina_attivita,
+            variant="secondary",
+            width=12,
+        ).pack(side="left", padx=(8, 0))
 
         footer = tk.Frame(dialog, bg=COLORS["background"])
         footer.pack(fill="x", padx=16, pady=(0, 12))
@@ -646,7 +963,10 @@ class AnomalieView:
             anomalia_id = None
         dialog = tk.Toplevel(self.dialog_parent)
         dialog.title("Codici Gestionali")
-        dialog.geometry("820x520")
+        cg_w, cg_h = 820, 520
+        cg_sw = dialog.winfo_screenwidth()
+        cg_sh = dialog.winfo_screenheight()
+        dialog.geometry(f"{cg_w}x{cg_h}+{(cg_sw - cg_w) // 2}+{(cg_sh - cg_h) // 2}")
         dialog.configure(bg=COLORS["background"])
 
         header = tk.Frame(dialog, bg=COLORS["background"])

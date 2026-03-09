@@ -223,7 +223,7 @@ class MainMenu(tk.Tk):
                 [
                     ("premi", "Fasce Premi Attivita", self._show_fasce_premi),
                     ("peso", "Peso Movimenti", self._show_peso_movimenti),
-                    ("malus", "Malus-Bonus", self._show_malus_bonus),
+                    ("malus", "Extra-Bonus", self._show_malus_bonus),
                 ],
             ),
             (
@@ -419,7 +419,7 @@ class MainMenu(tk.Tk):
         except Exception as exc:
             messagebox.showerror(
                 "Errore",
-                f"Impossibile caricare il modulo Malus-Bonus:\n{exc}",
+                f"Impossibile caricare il modulo Extra-Bonus:\n{exc}",
             )
 
     def _show_anomalie(self):
