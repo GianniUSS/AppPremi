@@ -80,7 +80,7 @@ $manifest.sha256 = $hash
 $manifest.file_name = $exeFileName
 
 if ($ReleaseNotesPath) {
-    $notes = Get-Content $ReleaseNotesPath | Where-Object { $_.Trim() -ne '' }
+    $notes = [string[]](Get-Content -Path $ReleaseNotesPath -Encoding UTF8 | Where-Object { $_.Trim() -ne '' })
     $manifest.release_notes = @($notes)
 }
 

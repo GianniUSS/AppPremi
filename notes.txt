@@ -1,0 +1,3 @@
+Ricerca libera nei premi: il campo filtro nelle viste Preparatori, Carrellisti, Doppia Spunta e Ricevimento ora cerca per codice o nome del preparatore
+Barra totali più visibile nelle viste premi (sfondo blu, testo bianco grassetto)
+Nuova sezione "Dati TIM" nel menu con griglia, filtri data e ricerca per codice/nome
