@@ -1,15 +1,13 @@
 {
-    "latest_version":  "1.2.27",
+    "latest_version":  "1.2.28",
     "release_date":  "2026-04-17",
     "release_notes":  [
-                          "Anomalie: colonna Dettagli mostra numero colli e testo leggibile",
-                          "Filtri persistenti: anno, mese e ricerca vengono mantenuti al cambio di schermata in tutte le viste premi e anomalie",
-                          "Anomalie: aggiunto pulsante Aggiorna per ricaricare la lista senza uscire dalla schermata",
-                          "Nuove Aperture Doppia Spunta: aggiunto campo di ricerca live e visualizzazione separata di codice e descrizione negozio",
-                          "Miglioramento performance: connection pool MySQL, eliminato overhead di connessione su ogni query"
+                          "Periodo globale: selezionando Anno e Mese nella barra laterale, tutte le schermate (Premi, Anomalie, Gestione Dati, Dati TIM) si aggiornano automaticamente con il periodo impostato",
+                          "Gestione Dati e Dati TIM: il mese e l\u0027anno di default ora rispettano il periodo globale della sidebar",
+                          "Impostazione periodo persistente: il periodo scelto viene salvato e ripristinato alla riapertura dell\u0027app"
                       ],
-    "download_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.27/GestionePremi.zip",
-    "sha256":  "50f62a11b03694a147b5859423644a4bddfe214729b79811ffd1efdb685f4d27",
-    "file_name":  "GestionePremi.zip",
+    "download_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.28/GestionePremi.exe",
+    "sha256":  "174debfa2c2defaaf88ab33d2b1bff87753b62202b2f5ec0b481012d8efea663",
+    "file_name":  "GestionePremi.exe",
     "icons_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.7/icons-v1.2.7.zip"
 }
