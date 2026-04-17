@@ -116,22 +116,22 @@ class PremiCarrellistiView(tk.Frame):
         mese_combo.grid(row=0, column=3, sticky="ew", padx=(0, 16), pady=10)
         mese_combo.bind("<<ComboboxSelected>>", lambda e: self._carica_premi())
 
-        # Codice (opzionale)
+        # Ricerca libera (codice o nome)
         tk.Label(
             filter_frame,
-            text="Codice (opzionale):",
+            text="\U0001f50d Ricerca:",
             font=FONTS["label"],
             bg=COLORS["background"],
         ).grid(row=0, column=4, sticky="w", padx=(0, 6), pady=10)
 
-        codice_entry = ttk.Entry(
+        search_entry = ttk.Entry(
             filter_frame,
             textvariable=self.codice_var,
-            width=16,
+            width=24,
             font=FONTS["input"],
         )
-        codice_entry.grid(row=0, column=5, sticky="ew", padx=(0, 16), pady=10)
-        codice_entry.bind("<Return>", lambda e: self._carica_premi())
+        search_entry.grid(row=0, column=5, sticky="ew", padx=(0, 16), pady=10)
+        search_entry.bind("<Return>", lambda e: self._carica_premi())
 
         # Pulsanti
         create_button(
@@ -226,18 +226,16 @@ class PremiCarrellistiView(tk.Frame):
         # Footer con statistiche
         footer_frame = tk.Frame(
             self,
-            bg=COLORS["white"],
-            highlightbackground=COLORS["border"],
-            highlightthickness=1,
+            bg=COLORS["primary"],
         )
-        footer_frame.pack(fill="x", padx=16)
+        footer_frame.pack(fill="x", padx=16, pady=(4, 0))
 
         self.stats_label = tk.Label(
             footer_frame,
             text="",
-            font=FONTS.get("subtitle", ("Segoe UI", 10)),
-            bg=COLORS["white"],
-            fg=COLORS["text_light"],
+            font=("Segoe UI", 12, "bold"),
+            bg=COLORS["primary"],
+            fg="white",
         )
         self.stats_label.pack(side="left", padx=12, pady=10)
 
@@ -408,7 +406,7 @@ class PremiCarrellistiView(tk.Frame):
         """Carica e visualizza i premi salvati nel database."""
         anno_str = self.anno_var.get().strip()
         mese_label = self.mese_var.get().strip()
-        codice_filtro = self.codice_var.get().strip().upper() or None
+        search_text = self.codice_var.get().strip() or None
 
         if not anno_str or not mese_label:
             return
@@ -421,7 +419,7 @@ class PremiCarrellistiView(tk.Frame):
 
         try:
             # Recupera premi dal database
-            premi = fetch_premi_carrellisti(anno, mese, codice_filtro)
+            premi = fetch_premi_carrellisti(anno, mese, search=search_text)
             self._current_premi = premi.copy()
             
             # Pulisci tabella

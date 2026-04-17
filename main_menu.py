@@ -214,6 +214,7 @@ class MainMenu(tk.Tk):
                 [
                     ("import", "Importazione Dati", self._show_importazione),
                     ("gestione", "Gestione Dati Produzione", self._show_gestione_dati),
+                    ("tim", "Dati TIM", self._show_tim),
                     ("anomalie", "Anomalie", self._show_anomalie),
                 ],
             ),
@@ -420,6 +421,21 @@ class MainMenu(tk.Tk):
             messagebox.showerror(
                 "Errore",
                 f"Impossibile caricare il modulo Extra-Bonus:\n{exc}",
+            )
+
+    def _show_tim(self):
+        """Mostra il modulo dati TIM."""
+        self._clear_content()
+        self._highlight_menu_button("tim")
+
+        try:
+            from tim_view import TimView
+
+            self.current_frame = TimView(self.content_frame)
+        except Exception as exc:
+            messagebox.showerror(
+                "Errore",
+                f"Impossibile caricare il modulo Dati TIM:\n{exc}",
             )
 
     def _show_anomalie(self):

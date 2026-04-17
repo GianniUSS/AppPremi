@@ -7,7 +7,36 @@ from contextlib import closing
 from typing import Any, Dict, List, Optional, Sequence, Tuple, cast
 import mysql.connector
 from mysql.connector import errorcode
+from mysql.connector.pooling import MySQLConnectionPool
 from config import MYSQL_CONFIG, MYSQL_CONFIG_MAIN, TABLE_NAME
+
+# ---------------------------------------------------------------------------
+# Connection pool — evita di aprire una nuova connessione TCP per ogni query.
+# Le connessioni vengono riusate: risparmio di ~30-100 ms a chiamata.
+# ---------------------------------------------------------------------------
+def _create_pool(name: str, config: dict, size: int = 5) -> Optional[MySQLConnectionPool]:
+    """Crea il pool; se il server non è raggiungibile ritorna None (gestione graceful)."""
+    try:
+        return MySQLConnectionPool(pool_name=name, pool_size=size, **config)
+    except Exception:
+        return None
+
+_pool_tim: Optional[MySQLConnectionPool] = _create_pool("appeden_tim", MYSQL_CONFIG)
+_pool_main: Optional[MySQLConnectionPool] = _create_pool("appeden_main", MYSQL_CONFIG_MAIN)
+
+
+def _get_conn():
+    """Restituisce una connessione dal pool TIM (o ne apre una nuova come fallback)."""
+    if _pool_tim:
+        return _pool_tim.get_connection()
+    return mysql.connector.connect(**MYSQL_CONFIG)
+
+
+def _get_conn_main():
+    """Restituisce una connessione dal pool MAIN (o ne apre una nuova come fallback)."""
+    if _pool_main:
+        return _pool_main.get_connection()
+    return mysql.connector.connect(**MYSQL_CONFIG_MAIN)
 
 
 def _column_exists(cur: Any, table_name: str, column_name: str) -> bool:
@@ -63,7 +92,7 @@ def _generate_tim_long_id(prefix: str = "001") -> int:
 
 def ensure_table_and_indexes() -> None:
     """Crea la tabella e l'indice unico se non esistono."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor()) as cur:
             cur.execute(
                 f"""
@@ -906,7 +935,7 @@ def insert_batch_data(values: List[Tuple]) -> int:
     if not values:
         return 0
 
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor()) as cur:
             try:
                 # ── Salva ore_tim esistenti prima della cancellazione ──
@@ -1022,7 +1051,7 @@ def update_penalita_picking(values: List[Tuple[datetime.date, str, float]]) -> i
         "WHERE tipo_attivita = 'PICKING' AND data BETWEEN %s AND %s"
     )
 
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor(dictionary=True)) as cur:
             # Reset tutte le penalità PICKING del mese
             cur.execute(reset_sql, (primo_giorno, ultimo_giorno))
@@ -1086,7 +1115,7 @@ def get_penalita_picking_from_sessioni(dates: List[datetime.date]) -> List[Tuple
         GROUP BY data, codice_picking
     """
 
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor(dictionary=True)) as cur:
             cur.execute(sql, dates)
             rows = cast(List[Dict[str, Any]], cur.fetchall())
@@ -1116,7 +1145,7 @@ def save_nuove_aperture(data_da: str, data_a: str, negozi: List[str]) -> int:
     if not negozi:
         return 0
     
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor()) as cur:
             # Elimina i negozi esistenti per questo periodo
             cur.execute(
@@ -1149,7 +1178,7 @@ def load_nuove_aperture(data_da: str, data_a: str) -> List[str]:
     Returns:
         Lista dei nomi negozi salvati per il periodo
     """
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor()) as cur:
             cur.execute(
                 """
@@ -1166,7 +1195,7 @@ def load_nuove_aperture(data_da: str, data_a: str) -> List[str]:
 
 def fetch_all_nuove_aperture() -> List[Dict[str, Any]]:
     """Restituisce tutti i periodi registrati di nuove aperture."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor(dictionary=True)) as cur:
             cur.execute(
                 """
@@ -1180,7 +1209,7 @@ def fetch_all_nuove_aperture() -> List[Dict[str, Any]]:
 
 def fetch_fasce_premi(tipo: Optional[str] = None) -> List[Dict[str, Any]]:
     """Recupera le fasce premio, opzionalmente filtrate per tipo attività."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor(dictionary=True)) as cur:
             if tipo:
                 cur.execute(
@@ -1207,7 +1236,7 @@ def fetch_fasce_premi(tipo: Optional[str] = None) -> List[Dict[str, Any]]:
 
 def fetch_pesi_movimenti(tipo_attivita: Optional[str] = None) -> List[Dict[str, Any]]:
     """Restituisce il peso dei movimenti per ogni tipo e attività."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor(dictionary=True)) as cur:
             if tipo_attivita:
                 cur.execute(
@@ -1240,7 +1269,7 @@ def insert_fascia_premio(
     note: Optional[str] = None,
 ) -> int:
     """Inserisce una nuova fascia premio."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor()) as cur:
             cur.execute(
                 """
@@ -1269,7 +1298,7 @@ def insert_peso_movimento(
     note: Optional[str] = None,
 ) -> int:
     """Inserisce un nuovo peso movimento."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor()) as cur:
             cur.execute(
                 """
@@ -1293,7 +1322,7 @@ def update_fascia_premio(
     note: Optional[str] = None,
 ) -> None:
     """Aggiorna una fascia premio esistente."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor()) as cur:
             cur.execute(
                 """
@@ -1327,7 +1356,7 @@ def update_peso_movimento(
     note: Optional[str] = None,
 ) -> None:
     """Aggiorna un peso movimento esistente."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor()) as cur:
             cur.execute(
                 """
@@ -1345,7 +1374,7 @@ def update_peso_movimento(
 
 def delete_fascia_premio(fascia_id: int) -> None:
     """Elimina una fascia premio."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor()) as cur:
             cur.execute("DELETE FROM fasce_premi WHERE id = %s", (fascia_id,))
             conn.commit()
@@ -1353,7 +1382,7 @@ def delete_fascia_premio(fascia_id: int) -> None:
 
 def delete_peso_movimento(peso_id: int) -> None:
     """Elimina un peso movimento."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor()) as cur:
             cur.execute("DELETE FROM peso_movimenti WHERE id = %s", (peso_id,))
             conn.commit()
@@ -1370,7 +1399,7 @@ def upsert_malus_bonus(
     note: Optional[str] = None,
 ) -> None:
     """Inserisce o aggiorna il record malus/bonus per un mese."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor()) as cur:
             _ensure_malus_bonus_schema(cur)
             legacy_soglia = max(soglia_rotture, soglia_differenze)
@@ -1406,7 +1435,7 @@ def upsert_malus_bonus(
 
 def fetch_malus_bonus(anno: Optional[int] = None) -> List[Dict[str, Any]]:
     """Recupera i record malus/bonus, opzionalmente filtrati per anno."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor(dictionary=True)) as cur:
             _ensure_malus_bonus_schema(cur)
             if anno:
@@ -1433,7 +1462,7 @@ def fetch_malus_bonus(anno: Optional[int] = None) -> List[Dict[str, Any]]:
 
 def get_malus_bonus(anno: int, mese: int) -> Optional[Dict[str, Any]]:
     """Restituisce il record malus/bonus per anno e mese."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor(dictionary=True)) as cur:
             _ensure_malus_bonus_schema(cur)
             cur.execute(
@@ -1451,7 +1480,7 @@ def get_malus_bonus(anno: int, mese: int) -> Optional[Dict[str, Any]]:
 
 def delete_malus_bonus(record_id: int) -> None:
     """Elimina un record malus/bonus."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor()) as cur:
             _ensure_malus_bonus_schema(cur)
             cur.execute("DELETE FROM malus_bonus WHERE id = %s", (record_id,))
@@ -1472,7 +1501,7 @@ def insert_anomalia(
     note: Optional[str] = None,
 ) -> int:
     """Inserisce una nuova anomalia. Se esiste già una ELIMINATA per la stessa combinazione, la salta."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor()) as cur:
             # Estrae anno e mese dalla data di rilevamento
             anno = data_rilevamento.year
@@ -1528,7 +1557,7 @@ def fetch_anomalie(
     codice_preparatore: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """Recupera le anomalie con filtri opzionali. tipo_anomalia può essere una stringa o una lista."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor(dictionary=True)) as cur:
             conditions: List[str] = ["COALESCE(stato, 'APERTA') != 'ELIMINATA'"]
             params: List[Any] = []
@@ -1574,7 +1603,7 @@ def fetch_anomalie(
 
 def fetch_anomalia_by_id(anomalia_id: int) -> Optional[Dict[str, Any]]:
     """Recupera una singola anomalia per ID."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor(dictionary=True)) as cur:
             cur.execute(
                 """
@@ -1589,6 +1618,53 @@ def fetch_anomalia_by_id(anomalia_id: int) -> Optional[Dict[str, Any]]:
             return cast(Optional[Dict[str, Any]], row)
 
 
+def fetch_attivita_tim_range(
+    data_da: datetime.date,
+    data_a: datetime.date,
+    search: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """Recupera le attività TIM per un intervallo date, con ricerca opzionale per codice/nome."""
+    with closing(_get_conn_main()) as conn:
+        with closing(conn.cursor(dictionary=True)) as cur:
+            conditions = ["a.data_riferimento BETWEEN %s AND %s"]
+            params: List[Any] = [data_da, data_a]
+
+            if search:
+                like = f"%{search}%"
+                conditions.append(
+                    "(LOWER(cg.codice) LIKE LOWER(%s)"
+                    " OR LOWER(CONCAT(u.cognome, ' ', u.nome)) LIKE LOWER(%s))"
+                )
+                params.extend([like, like])
+
+            where_clause = " AND ".join(conditions)
+
+            query = f"""
+                SELECT
+                    cg.codice AS codice_preparatore,
+                    CONCAT(u.cognome, ' ', u.nome) AS nome_preparatore,
+                    a.data_riferimento,
+                    ta.descrizione AS attivita,
+                    a.data_inizio,
+                    a.data_fine,
+                    COALESCE(a.pausa, 0) AS pausa,
+                    GREATEST(
+                        TIMESTAMPDIFF(MINUTE, a.data_inizio, a.data_fine) - COALESCE(a.pausa, 0),
+                        0
+                    ) AS durata_minuti
+                FROM attivita a
+                JOIN tipoattivita ta ON a.tipo_attivita_id = ta.id
+                JOIN utente u ON a.utente_id = u.id
+                JOIN codicegestionale cg ON cg.utente_id = u.id
+                    AND a.data_riferimento BETWEEN cg.valido_dal AND COALESCE(cg.valido_al, '9999-12-31')
+                WHERE {where_clause}
+                ORDER BY a.data_riferimento, cg.codice, a.data_inizio
+            """
+            cur.execute(query, params)
+            rows = cur.fetchall() or []
+            return cast(List[Dict[str, Any]], rows)
+
+
 def fetch_attivita_tim(
     codice_preparatore: str,
     data_riferimento: datetime.date,
@@ -1601,7 +1677,7 @@ def fetch_attivita_tim(
     if not codice:
         return []
 
-    with closing(mysql.connector.connect(**MYSQL_CONFIG_MAIN)) as conn:
+    with closing(_get_conn_main()) as conn:
         with closing(conn.cursor(dictionary=True)) as cur:
             query = """
                 SELECT
@@ -1633,7 +1709,7 @@ def fetch_attivita_tim(
 
 def fetch_tipi_attivita_tim() -> List[Dict[str, Any]]:
     """Recupera l'elenco dei tipi attività da TIM."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG_MAIN)) as conn:
+    with closing(_get_conn_main()) as conn:
         with closing(conn.cursor(dictionary=True)) as cur:
             cur.execute(
                 """
@@ -1653,7 +1729,7 @@ def fetch_pause_by_attivita_ids(
     if not attivita_ids:
         return {}
 
-    with closing(mysql.connector.connect(**MYSQL_CONFIG_MAIN)) as conn:
+    with closing(_get_conn_main()) as conn:
         with closing(conn.cursor(dictionary=True)) as cur:
             placeholders = ", ".join(["%s"] * len(attivita_ids))
             cur.execute(
@@ -1684,7 +1760,7 @@ def fetch_pause_by_attivita_ids(
 
 def update_attivita_tim(attivita_id: int, tipo_attivita_id: int) -> None:
     """Aggiorna il tipo attività di una singola attività su TIM."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG_MAIN)) as conn:
+    with closing(_get_conn_main()) as conn:
         with closing(conn.cursor()) as cur:
             cur.execute(
                 """
@@ -1712,7 +1788,7 @@ def split_attivita_tim(
 
     Ritorna l'id della nuova riga inserita.
     """
-    with closing(mysql.connector.connect(**MYSQL_CONFIG_MAIN)) as conn:
+    with closing(_get_conn_main()) as conn:
         with closing(conn.cursor(dictionary=True)) as cur:
             try:
                 cur.execute(
@@ -1904,7 +1980,7 @@ def ripristina_attivita_tim(selected_id: int) -> None:
     della Parte 2 sul record originale, ricalcola durata e pausa,
     e infine elimina il record derivato (Parte 2).
     """
-    with closing(mysql.connector.connect(**MYSQL_CONFIG_MAIN)) as conn:
+    with closing(_get_conn_main()) as conn:
         with closing(conn.cursor(dictionary=True)) as cur:
             try:
                 # ── Trova la coppia originale + derivato ──
@@ -2018,7 +2094,7 @@ def fetch_report_templates(
     attivita: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """Restituisce la lista dei report configurati per gli export."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor(dictionary=True)) as cur:
             base_query = (
                 "SELECT id, nome, descrizione, sql_template, attivo, attivita, categoria, "
@@ -2048,7 +2124,7 @@ def fetch_report_templates(
 
 def execute_custom_query(query: str, params: Sequence[Any]) -> Tuple[List[Dict[str, Any]], List[str]]:
     """Esegue una query arbitraria e restituisce righe e intestazioni."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor(dictionary=True)) as cur:
             cur.execute(query, tuple(params))
             rows = cur.fetchall() or []
@@ -2058,7 +2134,7 @@ def execute_custom_query(query: str, params: Sequence[Any]) -> Tuple[List[Dict[s
 
 def update_anomalia_stato(anomalia_id: int, nuovo_stato: str, note: Optional[str] = None) -> None:
     """Aggiorna lo stato di un'anomalia."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor()) as cur:
             if note:
                 cur.execute(
@@ -2085,7 +2161,7 @@ def resolve_anomalie_codice_non_abbinato(codice_preparatore: str, note: Optional
     codice = (codice_preparatore or "").strip().upper()
     if not codice:
         return
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor()) as cur:
             if note:
                 cur.execute(
@@ -2115,7 +2191,7 @@ def resolve_anomalie_codice_non_abbinato(codice_preparatore: str, note: Optional
 
 def save_premi_carrellisti(anno: int, mese: int, premi: List[Dict[str, Any]]) -> None:
     """Salva i premi carrellisti per un dato mese. Se esistono già, li sovrascrive."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor()) as cur:
             # Prima elimina i premi esistenti per quel mese
             cur.execute(
@@ -2155,14 +2231,15 @@ def save_premi_carrellisti(anno: int, mese: int, premi: List[Dict[str, Any]]) ->
 def fetch_premi_carrellisti(
     anno: Optional[int] = None,
     mese: Optional[int] = None,
-    codice_preparatore: Optional[str] = None
+    codice_preparatore: Optional[str] = None,
+    search: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
-    """Recupera i premi carrellisti filtrati per anno/mese/codice."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    """Recupera i premi carrellisti filtrati per anno/mese/codice o ricerca libera."""
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor(dictionary=True)) as cur:
             conditions = []
             params: List[Any] = []
-            
+
             if anno:
                 conditions.append("anno = %s")
                 params.append(anno)
@@ -2172,6 +2249,13 @@ def fetch_premi_carrellisti(
             if codice_preparatore:
                 conditions.append("codice_preparatore = %s")
                 params.append(codice_preparatore)
+            if search:
+                like = f"%{search}%"
+                conditions.append(
+                    "(LOWER(codice_preparatore) LIKE LOWER(%s)"
+                    " OR LOWER(nome_preparatore) LIKE LOWER(%s))"
+                )
+                params.extend([like, like])
             
             where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
             query = f"""
@@ -2190,7 +2274,7 @@ def fetch_premi_carrellisti(
 
 def delete_premi_carrellisti(anno: int, mese: int) -> None:
     """Elimina i premi carrellisti per un dato mese."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor()) as cur:
             cur.execute(
                 "DELETE FROM premi_carrellisti WHERE anno = %s AND mese = %s",
@@ -2201,7 +2285,7 @@ def delete_premi_carrellisti(anno: int, mese: int) -> None:
 
 def save_premi_ricevitori(anno: int, mese: int, premi: List[Dict[str, Any]]) -> None:
     """Salva i premi ricevimento per il mese selezionato sovrascrivendo quelli esistenti."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor()) as cur:
             cur.execute(
                 "DELETE FROM premi_ricevitori WHERE anno = %s AND mese = %s",
@@ -2247,9 +2331,10 @@ def fetch_premi_ricevitori(
     anno: Optional[int] = None,
     mese: Optional[int] = None,
     codice_preparatore: Optional[str] = None,
+    search: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
-    """Recupera i premi ricevimento filtrati per anno/mese/codice."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    """Recupera i premi ricevimento filtrati per anno/mese/codice o ricerca libera."""
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor(dictionary=True)) as cur:
             conditions: List[str] = []
             params: List[Any] = []
@@ -2263,6 +2348,13 @@ def fetch_premi_ricevitori(
             if codice_preparatore:
                 conditions.append("codice_preparatore = %s")
                 params.append(codice_preparatore)
+            if search:
+                like = f"%{search}%"
+                conditions.append(
+                    "(LOWER(codice_preparatore) LIKE LOWER(%s)"
+                    " OR LOWER(nome_preparatore) LIKE LOWER(%s))"
+                )
+                params.extend([like, like])
 
             where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
 
@@ -2284,7 +2376,7 @@ def fetch_premi_ricevitori(
 
 def delete_premi_ricevitori(anno: int, mese: int) -> None:
     """Elimina i premi ricevimento per un mese specifico."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor()) as cur:
             cur.execute(
                 "DELETE FROM premi_ricevitori WHERE anno = %s AND mese = %s",
@@ -2295,7 +2387,7 @@ def delete_premi_ricevitori(anno: int, mese: int) -> None:
 
 def save_premi_preparatori(anno: int, mese: int, premi: List[Dict[str, Any]]) -> None:
     """Salva i premi preparatori per un mese specifico sovrascrivendo quelli esistenti."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor()) as cur:
             cur.execute(
                 "DELETE FROM premi_preparatori WHERE anno = %s AND mese = %s",
@@ -2337,9 +2429,10 @@ def fetch_premi_preparatori(
     anno: Optional[int] = None,
     mese: Optional[int] = None,
     codice_preparatore: Optional[str] = None,
+    search: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
-    """Restituisce i premi preparatori filtrati per anno/mese/codice."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    """Restituisce i premi preparatori filtrati per anno/mese/codice o ricerca libera."""
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor(dictionary=True)) as cur:
             conditions: List[str] = []
             params: List[Any] = []
@@ -2353,6 +2446,13 @@ def fetch_premi_preparatori(
             if codice_preparatore:
                 conditions.append("codice_preparatore = %s")
                 params.append(codice_preparatore)
+            if search:
+                like = f"%{search}%"
+                conditions.append(
+                    "(LOWER(codice_preparatore) LIKE LOWER(%s)"
+                    " OR LOWER(nome_preparatore) LIKE LOWER(%s))"
+                )
+                params.extend([like, like])
 
             where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
 
@@ -2373,7 +2473,7 @@ def fetch_premi_preparatori(
 
 def delete_premi_preparatori(anno: int, mese: int) -> None:
     """Elimina i premi preparatori per un determinato mese."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor()) as cur:
             cur.execute(
                 "DELETE FROM premi_preparatori WHERE anno = %s AND mese = %s",
@@ -2384,7 +2484,7 @@ def delete_premi_preparatori(anno: int, mese: int) -> None:
 
 def save_premi_doppia_spunta(anno: int, mese: int, premi: List[Dict[str, Any]]) -> None:
     """Salva i premi Doppia Spunta per un dato mese sovrascrivendo gli esistenti."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor()) as cur:
             cur.execute(
                 "DELETE FROM premi_doppia_spunta WHERE anno = %s AND mese = %s",
@@ -2431,9 +2531,10 @@ def fetch_premi_doppia_spunta(
     anno: Optional[int] = None,
     mese: Optional[int] = None,
     codice_preparatore: Optional[str] = None,
+    search: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
-    """Recupera i premi Doppia Spunta filtrati per anno/mese/codice."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    """Recupera i premi Doppia Spunta filtrati per anno/mese/codice o ricerca libera."""
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor(dictionary=True)) as cur:
             conditions: List[str] = []
             params: List[Any] = []
@@ -2447,6 +2548,13 @@ def fetch_premi_doppia_spunta(
             if codice_preparatore:
                 conditions.append("codice_preparatore = %s")
                 params.append(codice_preparatore)
+            if search:
+                like = f"%{search}%"
+                conditions.append(
+                    "(LOWER(codice_preparatore) LIKE LOWER(%s)"
+                    " OR LOWER(nome_preparatore) LIKE LOWER(%s))"
+                )
+                params.extend([like, like])
 
             where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
 
@@ -2468,7 +2576,7 @@ def fetch_premi_doppia_spunta(
 
 def delete_premi_doppia_spunta(anno: int, mese: int) -> None:
     """Elimina i premi Doppia Spunta per un determinato mese."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor()) as cur:
             cur.execute(
                 "DELETE FROM premi_doppia_spunta WHERE anno = %s AND mese = %s",
@@ -2479,7 +2587,7 @@ def delete_premi_doppia_spunta(anno: int, mese: int) -> None:
 
 def delete_anomalia(anomalia_id: int) -> None:
     """Soft-delete un'anomalia (imposta stato = 'ELIMINATA')."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor()) as cur:
             cur.execute("UPDATE anomalie SET stato = 'ELIMINATA' WHERE id = %s", (anomalia_id,))
             conn.commit()
@@ -2487,7 +2595,7 @@ def delete_anomalia(anomalia_id: int) -> None:
 
 def clear_anomalie_by_date(data_rilevamento: datetime.date, tipo_anomalia: Optional[str] = None) -> int:
     """Elimina anomalie per una data specifica (utile prima di rigenerare). Preserva le ELIMINATA."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor()) as cur:
             if tipo_anomalia:
                 cur.execute(
@@ -2513,7 +2621,7 @@ def save_sessioni_carrellisti(sessioni: List[Dict[str, Any]]) -> None:
     print(f"[INFO] save_sessioni_carrellisti: ricevute {len(sessioni)} sessioni")
     
     try:
-        with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+        with closing(_get_conn()) as conn:
             # Disabilita autocommit per gestire transazione manuale
             conn.autocommit = False
             
@@ -2599,7 +2707,7 @@ def fetch_sessioni_carrellisti(
     codice_preparatore: Optional[str] = None
 ) -> List[Dict[str, Any]]:
     """Recupera i dettagli delle sessioni carrellisti, includendo colonne per tipo."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor(dictionary=True)) as cur:
             conditions = []
             params = []
@@ -2666,7 +2774,7 @@ def fetch_sessioni_carrellisti(
 
 def delete_sessioni_carrellisti(data: datetime.date, codice_preparatore: Optional[str] = None) -> None:
     """Elimina le sessioni carrellisti per una data (e opzionalmente un codice)."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor()) as cur:
             if codice_preparatore:
                 cur.execute(
@@ -2696,7 +2804,7 @@ def save_sessioni_doppia_spunta(sessioni: List[Dict[str, Any]]) -> None:
         pass
     
     try:
-        with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+        with closing(_get_conn()) as conn:
             conn.autocommit = False
             
             with closing(conn.cursor()) as cur:
@@ -2838,7 +2946,7 @@ def fetch_sessioni_doppia_spunta(
     codice_preparatore: Optional[str] = None
 ) -> List[Dict[str, Any]]:
     """Recupera i dettagli delle sessioni doppia spunta."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor(dictionary=True)) as cur:
             conditions = []
             params = []
@@ -2872,7 +2980,7 @@ def fetch_sessioni_doppia_spunta(
 
 def delete_sessioni_doppia_spunta(data: datetime.date, codice_preparatore: Optional[str] = None) -> None:
     """Elimina le sessioni doppia spunta per una data (e opzionalmente un codice)."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG)) as conn:
+    with closing(_get_conn()) as conn:
         with closing(conn.cursor()) as cur:
             if codice_preparatore:
                 cur.execute(
@@ -2894,7 +3002,7 @@ def search_utenti_tim(nominativo: str) -> List[Dict[str, Any]]:
         return []
 
     like = f"%{nome}%"
-    with closing(mysql.connector.connect(**MYSQL_CONFIG_MAIN)) as conn:
+    with closing(_get_conn_main()) as conn:
         with closing(conn.cursor(dictionary=True)) as cur:
             has_matricola = _tim_column_exists(cur, "utente", "matricola")
             has_badge = _tim_column_exists(cur, "utente", "badge")
@@ -2920,7 +3028,7 @@ def search_utenti_tim(nominativo: str) -> List[Dict[str, Any]]:
 
 def fetch_codici_gestionali_by_utente(utente_id: int) -> List[Dict[str, Any]]:
     """Recupera i codici gestionali associati a un utente TIM."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG_MAIN)) as conn:
+    with closing(_get_conn_main()) as conn:
         with closing(conn.cursor(dictionary=True)) as cur:
             has_reparto = _tim_column_exists(cur, "codicegestionale", "reparto")
             reparto_select = "cg.reparto" if has_reparto else "NULL AS reparto"
@@ -2955,7 +3063,7 @@ def update_codice_gestionale_tim(
     reparto: Optional[str] = None,
 ) -> None:
     """Aggiorna un record in codicegestionale su TIM."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG_MAIN)) as conn:
+    with closing(_get_conn_main()) as conn:
         with closing(conn.cursor()) as cur:
             has_descrizione = _tim_column_exists(cur, "codicegestionale", "descrizione")
             has_reparto = _tim_column_exists(cur, "codicegestionale", "reparto")
@@ -2996,7 +3104,7 @@ def insert_codice_gestionale_tim(
     reparto: Optional[str] = None,
 ) -> None:
     """Inserisce un nuovo record in codicegestionale su TIM."""
-    with closing(mysql.connector.connect(**MYSQL_CONFIG_MAIN)) as conn:
+    with closing(_get_conn_main()) as conn:
         with closing(conn.cursor()) as cur:
             has_id = _tim_column_exists(cur, "codicegestionale", "id")
             has_descrizione = _tim_column_exists(cur, "codicegestionale", "descrizione")

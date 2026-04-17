@@ -125,19 +125,19 @@ class PremiDoppiaSpuntaView(tk.Frame):
 
         tk.Label(
             filter_frame,
-            text="Codice (opzionale):",
+            text="\U0001f50d Ricerca:",
             font=FONTS["label"],
             bg=COLORS["background"],
         ).grid(row=0, column=4, sticky="w", padx=(0, 6), pady=10)
 
-        codice_entry = ttk.Entry(
+        search_entry = ttk.Entry(
             filter_frame,
             textvariable=self.codice_var,
-            width=16,
+            width=24,
             font=FONTS["input"],
         )
-        codice_entry.grid(row=0, column=5, sticky="ew", padx=(0, 16), pady=10)
-        codice_entry.bind("<Return>", lambda _: self._carica_premi())
+        search_entry.grid(row=0, column=5, sticky="ew", padx=(0, 16), pady=10)
+        search_entry.bind("<Return>", lambda _: self._carica_premi())
 
         create_button(
             filter_frame,
@@ -239,18 +239,16 @@ class PremiDoppiaSpuntaView(tk.Frame):
 
         footer_frame = tk.Frame(
             self,
-            bg=COLORS["white"],
-            highlightbackground=COLORS["border"],
-            highlightthickness=1,
+            bg=COLORS["primary"],
         )
-        footer_frame.pack(fill="x", padx=16)
+        footer_frame.pack(fill="x", padx=16, pady=(4, 0))
 
         self.stats_label = tk.Label(
             footer_frame,
             text="",
-            font=FONTS.get("subtitle", ("Segoe UI", 10)),
-            bg=COLORS["white"],
-            fg=COLORS["text_light"],
+            font=("Segoe UI", 12, "bold"),
+            bg=COLORS["primary"],
+            fg="white",
         )
         self.stats_label.pack(side="left", padx=12, pady=10)
 
@@ -453,7 +451,7 @@ class PremiDoppiaSpuntaView(tk.Frame):
         """Carica i premi salvati dal database."""
         anno_str = self.anno_var.get().strip()
         mese_label = self.mese_var.get().strip()
-        codice_filtro = self.codice_var.get().strip().upper() or None
+        search_text = self.codice_var.get().strip() or None
 
         if not anno_str or not mese_label:
             return
@@ -465,7 +463,7 @@ class PremiDoppiaSpuntaView(tk.Frame):
             return
 
         try:
-            premi = fetch_premi_doppia_spunta(anno, mese, codice_filtro)
+            premi = fetch_premi_doppia_spunta(anno, mese, search=search_text)
             self._current_premi = premi.copy()
 
             for item in self.tree.get_children():
