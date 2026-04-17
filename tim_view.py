@@ -82,11 +82,16 @@ class TimView(tk.Frame):
 
         filter_frame.grid_columnconfigure(5, weight=1)
 
-        # Set default dates: current month
-        today = datetime.date.today()
-        first_day = today.replace(day=1)
+        # Set default dates based on global periodo (sidebar)
+        import app_state
+        import calendar as _cal
+        anno = app_state.get_anno()
+        mese = app_state.get_mese()
+        last_day = _cal.monthrange(anno, mese)[1]
+        first_day = datetime.date(anno, mese, 1)
+        end_day = datetime.date(anno, mese, last_day)
         self.data_da_var.set(first_day.strftime("%d/%m/%Y"))
-        self.data_a_var.set(today.strftime("%d/%m/%Y"))
+        self.data_a_var.set(end_day.strftime("%d/%m/%Y"))
 
         # Table
         table_frame = tk.Frame(
@@ -226,10 +231,15 @@ class TimView(tk.Frame):
         )
 
     def _pulisci_filtri(self) -> None:
-        today = datetime.date.today()
-        first_day = today.replace(day=1)
+        import app_state
+        import calendar as _cal
+        anno = app_state.get_anno()
+        mese = app_state.get_mese()
+        last_day = _cal.monthrange(anno, mese)[1]
+        first_day = datetime.date(anno, mese, 1)
+        end_day = datetime.date(anno, mese, last_day)
         self.data_da_var.set(first_day.strftime("%d/%m/%Y"))
-        self.data_a_var.set(today.strftime("%d/%m/%Y"))
+        self.data_a_var.set(end_day.strftime("%d/%m/%Y"))
         self.search_var.set("")
         self._carica_dati()
 

@@ -115,6 +115,7 @@ class AnomalieView:
         today = datetime.date.today()
         self.today = today
 
+        import app_state
         s = AnomalieView._saved_state
         self.search_var = tk.StringVar(value=s.get("search", ""))
         self.codice_var = tk.StringVar(value=s.get("codice", ""))
@@ -122,12 +123,12 @@ class AnomalieView:
         self.stato_var = tk.StringVar(value=s.get("stato", ANOMALIA_STATO_CHOICES[0]))
         self.dal_var = tk.StringVar(value=s.get("dal", ""))
         self.al_var = tk.StringVar(value=s.get("al", ""))
-        self.anno_var = tk.StringVar(value=s.get("anno", str(today.year)))
+        self.anno_var = tk.StringVar(value=str(app_state.get_anno()))
         default_month_label = next(
-            (label for label, value in MONTH_CHOICES if value == today.month),
+            (label for label, value in MONTH_CHOICES if value == app_state.get_mese()),
             MONTH_CHOICES[0][0],
         )
-        self.mese_var = tk.StringVar(value=s.get("mese", default_month_label))
+        self.mese_var = tk.StringVar(value=default_month_label)
         self.use_date_range_var = tk.BooleanVar(value=s.get("use_range", False))
         self._saved_tipo_indices: list = s.get("tipo_indices", [])
         self.report_var = tk.StringVar()
@@ -236,18 +237,16 @@ class AnomalieView:
         attivita_menu.grid(row=0, column=5, sticky="ew", padx=(0, 16), pady=10)
         attivita_menu.bind("<<ComboboxSelected>>", self._on_attivita_changed)
 
-        # Anno
+        # Anno (self.anno_var già inizializzata in __init__ dal periodo globale)
         tk.Label(filter_frame, text="Anno:", font=FONTS["label"], bg=COLORS["background"], anchor="w").grid(row=0, column=6, sticky="w", padx=(0, 6), pady=10)
         current_year = datetime.date.today().year
         anni = [str(y) for y in range(current_year - 5, current_year + 2)]
-        self.anno_var = tk.StringVar(value=str(current_year))
         anno_menu = ttk.Combobox(filter_frame, textvariable=self.anno_var, values=anni, width=10, state="readonly", font=FONTS["input"])
         anno_menu.grid(row=0, column=7, sticky="ew", padx=(0, 16), pady=10)
 
-        # Mese
+        # Mese (self.mese_var già inizializzata in __init__ dal periodo globale)
         tk.Label(filter_frame, text="Mese:", font=FONTS["label"], bg=COLORS["background"], anchor="w").grid(row=0, column=8, sticky="w", padx=(0, 6), pady=10)
         mesi = [label for label, _ in MONTH_CHOICES]
-        self.mese_var = tk.StringVar(value=mesi[0])
         mese_menu = ttk.Combobox(filter_frame, textvariable=self.mese_var, values=mesi, width=14, state="readonly", font=FONTS["input"])
         mese_menu.grid(row=0, column=9, sticky="ew", padx=(0, 16), pady=10)
 
@@ -341,11 +340,11 @@ class AnomalieView:
         columns = (
             "id",
             "tipo",
-            "anno",
-            "mese",
+            "data",
             "codice",
             "nome",
             "attivita",
+            "colli",
             "ore",
             "dettagli",
             "stato",
@@ -364,11 +363,11 @@ class AnomalieView:
         headers = {
             "id": "ID",
             "tipo": "Tipo",
-            "anno": "Anno",
-            "mese": "Mese",
+            "data": "Data",
             "codice": "Codice",
             "nome": "Nome",
             "attivita": "Attività",
+            "colli": "Colli",
             "ore": "Ore TIM",
             "dettagli": "Dettagli",
             "stato": "Stato",
@@ -378,14 +377,14 @@ class AnomalieView:
 
         self.tree.column("id", width=60, anchor="center")
         self.tree.column("tipo", width=170, anchor="w")
-        self.tree.column("anno", width=70, anchor="center")
-        self.tree.column("mese", width=90, anchor="center")
-        self.tree.column("codice", width=90, anchor="center")
-        self.tree.column("nome", width=180, anchor="w")
-        self.tree.column("attivita", width=110, anchor="center")
-        self.tree.column("ore", width=80, anchor="center")
-        self.tree.column("dettagli", width=320, anchor="w")
-        self.tree.column("stato", width=110, anchor="center")
+        self.tree.column("data", width=95, anchor="center")
+        self.tree.column("codice", width=80, anchor="center")
+        self.tree.column("nome", width=170, anchor="w")
+        self.tree.column("attivita", width=105, anchor="center")
+        self.tree.column("colli", width=70, anchor="e")
+        self.tree.column("ore", width=80, anchor="e")
+        self.tree.column("dettagli", width=340, anchor="w")
+        self.tree.column("stato", width=100, anchor="center")
 
         self.tree.tag_configure("APERTA", background="#FFE5E0")
         self.tree.tag_configure("VERIFICATA", background="#FFF6DA")
@@ -1574,9 +1573,10 @@ class AnomalieView:
         self.dal_var.set("")
         self.al_var.set("")
         self.codice_var.set("")
-        self.anno_var.set(str(self.today.year))
+        import app_state
+        self.anno_var.set(str(app_state.get_anno()))
         default_month_label = next(
-            (label for label, value in MONTH_CHOICES if value == self.today.month),
+            (label for label, value in MONTH_CHOICES if value == app_state.get_mese()),
             MONTH_CHOICES[0][0],
         )
         self.mese_var.set(default_month_label)
@@ -1671,6 +1671,65 @@ class AnomalieView:
             "data_a": data_a,
         }
 
+    @staticmethod
+    def _format_dettagli(tipo_anomalia: str, dettagli_db: str) -> str:
+        """
+        Trasforma il testo verboso dal DB in una descrizione compatta.
+        Esempi output:
+          - "Codice non trovato in TIM"
+          - "TIM 5.50h · Gest 8.00h · Δ -150m"
+          - "TIM 0.02h · nessuna produzione"
+        """
+        if not dettagli_db:
+            return ""
+        body = dettagli_db.strip()
+        # Rimuovi eventuale prefisso "Data: YYYY-MM-DD - " (info ora ha colonna dedicata)
+        body = re.sub(r"^Data:\s*\d{4}-\d{2}-\d{2}\s*-\s*", "", body)
+
+        tipo = (tipo_anomalia or "").upper()
+
+        # DIFFERENZA_60_120 / DIFFERENZA_>120
+        if tipo.startswith("DIFFERENZA"):
+            m = re.search(
+                r"Minuti TIM:\s*([\d.]+)\s*\(([\d.]+)h\)\s*,\s*Minuti Gestionale:\s*([\d.]+)\s*\(([\d.]+)h\)\s*-\s*Differenza:\s*([+-]?\d+)\s*min",
+                body,
+            )
+            if m:
+                tim_h = m.group(2)
+                gest_h = m.group(4)
+                diff_h = int(m.group(5)) / 60.0
+                tipi_match = re.search(r"Tipi:\s*(.+)$", body)
+                tipi_str = f" · {tipi_match.group(1).strip()}" if tipi_match else ""
+                return f"TIM {tim_h}h · Gest {gest_h}h · Δ {diff_h:+.2f}h{tipi_str}"
+
+        # ORE_SENZA_PRODUZIONE: "X minuti (Y ore) in TIM ma <descr>"
+        if tipo == "ORE_SENZA_PRODUZIONE":
+            m = re.search(r"([\d.]+)\s*minuti\s*\(([\d.]+)\s*ore\)\s*in TIM ma\s*(.+)$", body, re.IGNORECASE)
+            if m:
+                ore = m.group(2)
+                descr = m.group(3).strip().rstrip(".")
+                return f"TIM {ore}h · {descr}"
+
+        # PRODUZIONE_SENZA_ORE: "Ore TIM: 0.00h, Ore Gestionale: XX.XXh - Tipi: ..."
+        #   NB: storicamente il valore "Ore Gestionale" era salvato in MINUTI con
+        #   etichetta errata "h". Qui rileviamo il caso e convertiamo in ore dividendo
+        #   per 60 quando il valore è > 12 (nessuno lavora più di 12h senza TIM).
+        if tipo == "PRODUZIONE_SENZA_ORE":
+            m = re.search(r"Ore Gestionale:\s*([\d.]+)h", body)
+            if m:
+                raw_val = float(m.group(1))
+                ore_val = raw_val / 60 if raw_val > 12 else raw_val
+                tipi_match = re.search(r"Tipi:\s*(.+)$", body)
+                tipi_str = f" · {tipi_match.group(1).strip()}" if tipi_match else ""
+                return f"Nessuna ora TIM · Gest {ore_val:.2f}h{tipi_str}"
+            # Versione DOPPIA_SPUNTA: "Colli: N - Tipi: ..."
+            m2 = re.search(r"Colli:\s*(\d+)\s*-\s*Tipi:\s*(.+)$", body)
+            if m2:
+                return f"Nessuna ora TIM · {m2.group(1)} colli · {m2.group(2).strip()}"
+
+        # CODICE_NON_ABBINATO: testo già conciso
+        return body
+
     def _load_anomalie(self) -> None:
         try:
             filters = self._gather_filters()
@@ -1723,8 +1782,6 @@ class AnomalieView:
             "stato": self.stato_var.get(),
             "dal": self.dal_var.get(),
             "al": self.al_var.get(),
-            "anno": self.anno_var.get(),
-            "mese": self.mese_var.get(),
             "use_range": self.use_date_range_var.get(),
             "tipo_indices": list(self.tipo_listbox.curselection()),
         }
@@ -1737,31 +1794,23 @@ class AnomalieView:
             # Converti minuti → ore per la visualizzazione
             ore_str = f"{float(ore_tim)/60:.2f}" if ore_tim is not None else ""
 
-            # Costruisce dettagli leggibili con numero colli
             totale_colli = anomalia.get("totale_colli") or 0
-            dettagli_db = (anomalia.get("dettagli") or "").strip()
-            parti = []
-            if totale_colli:
-                parti.append(f"Colli: {int(totale_colli)}")
-            if dettagli_db:
-                parti.append(dettagli_db)
-            dettagli_display = " | ".join(parti) if parti else ""
+            colli_str = f"{int(totale_colli)}" if totale_colli else ""
 
-            # Usa anno e mese dal database se disponibili, altrimenti dalla data_rilevamento
-            anno = anomalia.get("anno")
-            mese = anomalia.get("mese")
-            
-            if not anno or not mese:
-                # Fallback: estrae da data_rilevamento se anno/mese non presenti
-                data_ril = anomalia.get("data_rilevamento")
-                if data_ril:
-                    anno = data_ril.year
-                    mese = data_ril.month
-                else:
-                    anno = ""
-                    mese = ""
-            
-            mese_label = MONTH_CHOICES[mese][0] if mese and 0 < mese < len(MONTH_CHOICES) else ""
+            # Data rilevamento in formato dd/mm/yyyy
+            data_ril = anomalia.get("data_rilevamento")
+            data_str = ""
+            if data_ril:
+                try:
+                    data_str = data_ril.strftime("%d/%m/%Y")
+                except Exception:
+                    data_str = str(data_ril)
+
+            # Dettagli compatti e leggibili
+            dettagli_display = self._format_dettagli(
+                anomalia.get("tipo_anomalia", ""),
+                anomalia.get("dettagli") or "",
+            )
 
             self.tree.insert(
                 "",
@@ -1769,11 +1818,11 @@ class AnomalieView:
                 values=(
                     anomalia.get("id", ""),
                     anomalia.get("tipo_anomalia", ""),
-                    anno,
-                    mese_label,
+                    data_str,
                     anomalia.get("codice_preparatore", ""),
                     anomalia.get("nome_preparatore", ""),
                     anomalia.get("tipo_attivita", ""),
+                    colli_str,
                     ore_str,
                     dettagli_display,
                     anomalia.get("stato", ""),

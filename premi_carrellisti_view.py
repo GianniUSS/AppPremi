@@ -6,7 +6,7 @@ from decimal import Decimal
 import os
 import re
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
@@ -48,10 +48,10 @@ class PremiCarrellistiView(tk.Frame):
         super().__init__(parent, bg=COLORS["background"])
         self.pack(fill="both", expand=True)
 
-        today = datetime.date.today()
+        import app_state
         s = PremiCarrellistiView._saved_state
-        self.anno_var = tk.StringVar(value=s.get("anno", str(today.year)))
-        self.mese_var = tk.StringVar(value=s.get("mese", MONTH_CHOICES[today.month - 1][0]))
+        self.anno_var = tk.StringVar(value=str(app_state.get_anno()))
+        self.mese_var = tk.StringVar(value=app_state.get_mese_label())
         self.codice_var = tk.StringVar(value=s.get("search", ""))
         self._current_premi: List[Dict[str, Any]] = []
         self._sort_reverse: Dict[str, bool] = {}
@@ -421,7 +421,7 @@ class PremiCarrellistiView(tk.Frame):
             return
 
         PremiCarrellistiView._saved_state = {
-            "anno": anno_str, "mese": mese_label, "search": self.codice_var.get().strip()
+            "search": self.codice_var.get().strip()
         }
 
         try:

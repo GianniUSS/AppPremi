@@ -5,6 +5,7 @@ import datetime
 import os
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
+import app_state
 
 
 class CollapsibleMenuSection(tk.Frame):
@@ -126,6 +127,7 @@ class MainMenu(tk.Tk):
         # Variabile per tracciare il modulo corrente
         self.current_module = None
         self.current_frame = None
+        self._current_show_fn = None  # funzione da richiamare per ricaricare la vista corrente
         
         # Configura lo stile
         self._setup_style()
@@ -186,18 +188,72 @@ class MainMenu(tk.Tk):
         menu_frame.pack_propagate(False)  # Mantieni larghezza fissa
         
         # Header del menu
-        header_frame = tk.Frame(menu_frame, bg="#007acc", height=80)
+        header_frame = tk.Frame(menu_frame, bg="#007acc")
         header_frame.pack(fill=tk.X)
-        header_frame.pack_propagate(False)
-        
+
         app_title = tk.Label(
             header_frame,
             text="Premi di Produzione",
-            font=("Segoe UI", 18, "bold"),
+            font=("Segoe UI", 15, "bold"),
             bg="#007acc",
             fg="white"
         )
-        app_title.pack(pady=20)
+        app_title.pack(pady=(14, 6))
+
+        # ── Selettore periodo globale ──────────────────────────────────────
+        periodo_frame = tk.Frame(header_frame, bg="#005f99")
+        periodo_frame.pack(fill=tk.X, padx=8, pady=(0, 10))
+
+        tk.Label(
+            periodo_frame,
+            text="📅 Periodo:",
+            font=("Segoe UI", 9, "bold"),
+            bg="#005f99",
+            fg="white",
+        ).pack(side=tk.LEFT, padx=(8, 4))
+
+        mesi_labels = [
+            "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+            "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre",
+        ]
+        anni = [str(y) for y in range(2023, datetime.date.today().year + 3)]
+
+        self._periodo_mese_var = tk.StringVar(value=app_state.get_mese_label())
+        self._periodo_anno_var = tk.StringVar(value=str(app_state.get_anno()))
+
+        mese_cb = ttk.Combobox(
+            periodo_frame,
+            textvariable=self._periodo_mese_var,
+            values=mesi_labels,
+            state="readonly",
+            width=9,
+            font=("Segoe UI", 9),
+        )
+        mese_cb.pack(side=tk.LEFT, padx=2)
+
+        anno_cb = ttk.Combobox(
+            periodo_frame,
+            textvariable=self._periodo_anno_var,
+            values=anni,
+            state="readonly",
+            width=5,
+            font=("Segoe UI", 9),
+        )
+        anno_cb.pack(side=tk.LEFT, padx=(2, 8))
+
+        def _on_periodo_changed(*_):
+            try:
+                anno = int(self._periodo_anno_var.get())
+                mese = mesi_labels.index(self._periodo_mese_var.get()) + 1
+                app_state.set_periodo(anno, mese)
+                # Ricarica la vista corrente (se è sensibile al periodo)
+                if self._current_show_fn is not None:
+                    self.after(50, self._current_show_fn)
+            except (ValueError, IndexError):
+                pass
+
+        mese_cb.bind("<<ComboboxSelected>>", _on_periodo_changed)
+        anno_cb.bind("<<ComboboxSelected>>", _on_periodo_changed)
         
         # Separatore
         separator1 = tk.Frame(menu_frame, bg="#3e3e42", height=2)
@@ -332,6 +388,7 @@ class MainMenu(tk.Tk):
             self.current_frame.destroy()
             self.current_frame = None
         self.current_module = None
+        self._current_show_fn = None
     
     def _show_importazione(self):
         """Mostra il modulo di importazione dati"""
@@ -357,6 +414,7 @@ class MainMenu(tk.Tk):
     def _show_gestione_dati(self):
         """Mostra il modulo di gestione dati di produzione"""
         self._clear_content()
+        self._current_show_fn = self._show_gestione_dati
         self._highlight_menu_button("gestione")
         
         # Importa e mostra il visualizzatore dati
@@ -426,6 +484,7 @@ class MainMenu(tk.Tk):
     def _show_tim(self):
         """Mostra il modulo dati TIM."""
         self._clear_content()
+        self._current_show_fn = self._show_tim
         self._highlight_menu_button("tim")
 
         try:
@@ -441,6 +500,7 @@ class MainMenu(tk.Tk):
     def _show_anomalie(self):
         """Mostra il modulo gestione anomalie"""
         self._clear_content()
+        self._current_show_fn = self._show_anomalie
         self._highlight_menu_button("anomalie")
 
         try:
@@ -462,6 +522,7 @@ class MainMenu(tk.Tk):
     def _show_premi_carrellisti(self):
         """Mostra il modulo calcolo premi carrellisti"""
         self._clear_content()
+        self._current_show_fn = self._show_premi_carrellisti
         self._highlight_menu_button("premi_carrellisti")
 
         try:
@@ -477,6 +538,7 @@ class MainMenu(tk.Tk):
     def _show_premi_preparatori(self):
         """Mostra il modulo calcolo premi preparatori"""
         self._clear_content()
+        self._current_show_fn = self._show_premi_preparatori
         self._highlight_menu_button("premi_preparatori")
 
         try:
@@ -492,6 +554,7 @@ class MainMenu(tk.Tk):
     def _show_premi_ricevimento(self):
         """Mostra il modulo calcolo premi ricevimento"""
         self._clear_content()
+        self._current_show_fn = self._show_premi_ricevimento
         self._highlight_menu_button("premi_ricevimento")
 
         try:
@@ -507,6 +570,7 @@ class MainMenu(tk.Tk):
     def _show_premi_doppia_spunta(self):
         """Mostra il modulo calcolo premi doppia spunta"""
         self._clear_content()
+        self._current_show_fn = self._show_premi_doppia_spunta
         self._highlight_menu_button("premi_doppia_spunta")
 
         try:
@@ -591,9 +655,13 @@ class MainMenu(tk.Tk):
         mese_combo = ttk.Combobox(form, textvariable=mese_var, values=mesi, state="readonly", width=16)
         mese_combo.grid(row=1, column=1, sticky="w", padx=(0, 12), pady=6)
 
-        anno_var.set(str(datetime.date.today().year))
+        # Default dal periodo globale (sidebar)
+        anno_var.set(str(app_state.get_anno()))
         if mesi:
-            mese_combo.current(0)
+            try:
+                mese_combo.current(app_state.get_mese() - 1)
+            except Exception:
+                mese_combo.current(0)
 
         def _do_export() -> None:
             anno_str = anno_var.get().strip()

@@ -59,14 +59,15 @@ class DataViewer:
             self.window = parent
             # Non chiama pack qui perché il parent è già nel layout
 
+        import app_state
         today = datetime.date.today()
         self.search_var = tk.StringVar()
         self.tipo_attivita_var = tk.StringVar(value="Tutti")
         self.data_da_var = tk.StringVar()
         self.data_a_var = tk.StringVar()
         self.use_date_filter_var = tk.BooleanVar(value=False)
-        self.anno_var = tk.StringVar(value=str(today.year))
-        self.mese_var = tk.StringVar(value=MONTH_CHOICES[today.month][0])
+        self.anno_var = tk.StringVar(value=str(app_state.get_anno()))
+        self.mese_var = tk.StringVar(value=MONTH_CHOICES[app_state.get_mese()][0])
         self._sync_in_progress = False
         self._last_filters = None
         self._stats_text_before_sync = ""
@@ -602,14 +603,14 @@ class DataViewer:
 
     def _clear_filters(self) -> None:
         """Ripristina i filtri di ricerca ai valori di default."""
-        today = datetime.date.today()
+        import app_state
         self.search_var.set("")
         self.tipo_attivita_var.set("Tutti")
         self.data_da_var.set("")
         self.data_a_var.set("")
         self.use_date_filter_var.set(False)
-        self.anno_var.set(str(today.year))
-        self.mese_var.set(MONTH_CHOICES[today.month][0])
+        self.anno_var.set(str(app_state.get_anno()))
+        self.mese_var.set(MONTH_CHOICES[app_state.get_mese()][0])
         self._update_filter_states()
         self._load_data(self._collect_filters())
         self._update_nuove_aperture_button()
@@ -1803,7 +1804,8 @@ class DataViewer:
                                 if tipo_attivita == 'DOPPIA_SPUNTA':
                                     produzione_descr = f"Colli: {int(produzione_val)}"
                                 else:
-                                    produzione_descr = f"Ore Gestionale: {ore_gestionale_val:.2f}h"
+                                    # ore_gestionale è in MINUTI (vedi nota riga 1696) → converto in ore
+                                    produzione_descr = f"Ore Gestionale: {ore_gestionale_val/60:.2f}h"
                                 
                                 from database import insert_anomalia
                                 insert_anomalia(
@@ -1816,7 +1818,7 @@ class DataViewer:
                                     dettagli=f"Data: {data_str} - Ore TIM: 0.00h, {produzione_descr} - Tipi: {tipi}"
                                 )
                                 anomalie_senza_ore_count += 1
-                                print(f"  ⚠️ PRODUZIONE_SENZA_ORE: {codice} ({nome_formattato}) {data_str} - Gest: {ore_gestionale_val:.2f}h - Tipi: {tipi}")
+                                print(f"  ⚠️ PRODUZIONE_SENZA_ORE: {codice} ({nome_formattato}) {data_str} - Gest: {ore_gestionale_val/60:.2f}h - Tipi: {tipi}")
                             
                             print(f"✅ Anomalie PRODUZIONE_SENZA_ORE generate: {anomalie_senza_ore_count}")
 

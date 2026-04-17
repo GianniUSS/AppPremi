@@ -53,10 +53,10 @@ class PremiRicevitoriView(tk.Frame):
         super().__init__(parent, bg=COLORS["background"])
         self.pack(fill="both", expand=True)
 
-        today = datetime.date.today()
+        import app_state
         s = PremiRicevitoriView._saved_state
-        self.anno_var = tk.StringVar(value=s.get("anno", str(today.year)))
-        self.mese_var = tk.StringVar(value=s.get("mese", MONTH_CHOICES[today.month - 1][0]))
+        self.anno_var = tk.StringVar(value=str(app_state.get_anno()))
+        self.mese_var = tk.StringVar(value=app_state.get_mese_label())
         self.codice_var = tk.StringVar(value=s.get("search", ""))
         self.ore_giorno_var = tk.StringVar(value="8")
         self.total_ore_mag_var = tk.StringVar(value="0.00")
@@ -500,7 +500,7 @@ class PremiRicevitoriView(tk.Frame):
             return
 
         PremiRicevitoriView._saved_state = {
-            "anno": anno_str, "mese": mese_label, "search": self.codice_var.get().strip()
+            "search": self.codice_var.get().strip()
         }
 
         try:
