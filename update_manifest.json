@@ -1,14 +1,15 @@
 {
-    "latest_version":  "1.2.26",
+    "latest_version":  "1.2.27",
     "release_date":  "2026-04-17",
     "release_notes":  [
-                          "Miglioramento performance: connection pool MySQL, eliminato overhead di connessione su ogni query (attesa ridotta del 60-80%)",
-                          "Ricerca libera nei premi: il campo filtro nelle viste Preparatori, Carrellisti, Doppia Spunta e Ricevimento ora cerca per codice o nome del preparatore",
-                          "Barra totali più visibile nelle viste premi (sfondo blu, testo bianco grassetto)",
-                          "Nuova sezione Dati TIM nel menu con griglia, filtri data e ricerca per codice/nome"
+                          "Anomalie: colonna Dettagli mostra numero colli e testo leggibile",
+                          "Filtri persistenti: anno, mese e ricerca vengono mantenuti al cambio di schermata in tutte le viste premi e anomalie",
+                          "Anomalie: aggiunto pulsante Aggiorna per ricaricare la lista senza uscire dalla schermata",
+                          "Nuove Aperture Doppia Spunta: aggiunto campo di ricerca live e visualizzazione separata di codice e descrizione negozio",
+                          "Miglioramento performance: connection pool MySQL, eliminato overhead di connessione su ogni query"
                       ],
-    "download_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.26/GestionePremi.zip",
-    "sha256":  "9e4ce50bb12f6959330e292a0201ab35dac9ea867b314326b6367240839f3e1b",
+    "download_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.27/GestionePremi.zip",
+    "sha256":  "50f62a11b03694a147b5859423644a4bddfe214729b79811ffd1efdb685f4d27",
     "file_name":  "GestionePremi.zip",
     "icons_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.7/icons-v1.2.7.zip"
 }
