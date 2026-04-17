@@ -1559,42 +1559,51 @@ def fetch_anomalie(
     """Recupera le anomalie con filtri opzionali. tipo_anomalia può essere una stringa o una lista."""
     with closing(_get_conn()) as conn:
         with closing(conn.cursor(dictionary=True)) as cur:
-            conditions: List[str] = ["COALESCE(stato, 'APERTA') != 'ELIMINATA'"]
+            conditions: List[str] = ["COALESCE(a.stato, 'APERTA') != 'ELIMINATA'"]
             params: List[Any] = []
 
             if tipo_anomalia:
                 if isinstance(tipo_anomalia, list):
-                    # Selezione multipla
                     placeholders = ", ".join(["%s"] * len(tipo_anomalia))
-                    conditions.append(f"tipo_anomalia IN ({placeholders})")
+                    conditions.append(f"a.tipo_anomalia IN ({placeholders})")
                     params.extend(tipo_anomalia)
                 else:
-                    # Singola selezione
-                    conditions.append("tipo_anomalia = %s")
+                    conditions.append("a.tipo_anomalia = %s")
                     params.append(tipo_anomalia)
             if stato:
-                conditions.append("stato = %s")
+                conditions.append("a.stato = %s")
                 params.append(stato)
             if tipo_attivita:
-                conditions.append("tipo_attivita = %s")
+                conditions.append("a.tipo_attivita = %s")
                 params.append(tipo_attivita)
             if codice_preparatore:
-                conditions.append("codice_preparatore = %s")
+                conditions.append("a.codice_preparatore = %s")
                 params.append(codice_preparatore)
             if data_da:
-                conditions.append("data_rilevamento >= %s")
+                conditions.append("a.data_rilevamento >= %s")
                 params.append(data_da)
             if data_a:
-                conditions.append("data_rilevamento <= %s")
+                conditions.append("a.data_rilevamento <= %s")
                 params.append(data_a)
 
             where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
             query = f"""
-                SELECT id, tipo_anomalia, data_rilevamento, anno, mese, codice_preparatore, nome_preparatore,
-                       tipo_attivita, ore_tim, dettagli, stato, note, data_creazione, data_aggiornamento
-                FROM anomalie
+                SELECT a.id, a.tipo_anomalia, a.data_rilevamento, a.anno, a.mese,
+                       a.codice_preparatore, a.nome_preparatore, a.tipo_attivita,
+                       a.ore_tim, a.dettagli, a.stato, a.note,
+                       a.data_creazione, a.data_aggiornamento,
+                       COALESCE(SUM(dp.totale_colli), 0) AS totale_colli
+                FROM anomalie a
+                LEFT JOIN dati_produzione dp ON
+                    dp.data = a.data_rilevamento
+                    AND UPPER(dp.codice_preparatore) = UPPER(a.codice_preparatore)
+                    AND dp.tipo_attivita = a.tipo_attivita
                 {where_clause}
-                ORDER BY data_rilevamento ASC, anno ASC, mese ASC, data_creazione ASC
+                GROUP BY a.id, a.tipo_anomalia, a.data_rilevamento, a.anno, a.mese,
+                         a.codice_preparatore, a.nome_preparatore, a.tipo_attivita,
+                         a.ore_tim, a.dettagli, a.stato, a.note,
+                         a.data_creazione, a.data_aggiornamento
+                ORDER BY a.data_rilevamento ASC, a.anno ASC, a.mese ASC, a.data_creazione ASC
             """
             cur.execute(query, params)
             result = cur.fetchall()

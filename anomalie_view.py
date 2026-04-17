@@ -70,8 +70,20 @@ MONTH_LABEL_TO_VALUE: Dict[str, Optional[int]] = {
 }
 
 
+_TIPO_ANOMALIA_LABEL: Dict[str, str] = {
+    "PRODUZIONE_SENZA_ORE": "Produzione senza ore TIM",
+    "ORE_SENZA_PRODUZIONE": "Ore TIM senza produzione",
+    "DIFFERENZA_60_120": "Differenza ore 60-120 min",
+    "CODICE_NON_ABBINATO": "Codice non abbinato",
+}
+
+
 class AnomalieView:
     """Gestione delle anomalie con filtri periodo o intervallo date."""
+
+    # Stato filtri persistente tra navigazioni
+    _saved_state: Dict[str, Any] = {}
+
     def __init__(self, parent: Optional[tk.Misc] = None, use_toplevel: bool = True) -> None:
         self.parent = parent
         self.use_toplevel = use_toplevel
@@ -103,24 +115,34 @@ class AnomalieView:
         today = datetime.date.today()
         self.today = today
 
-        self.search_var = tk.StringVar()
-        self.codice_var = tk.StringVar()
+        s = AnomalieView._saved_state
+        self.search_var = tk.StringVar(value=s.get("search", ""))
+        self.codice_var = tk.StringVar(value=s.get("codice", ""))
         self.tipo_var = tk.StringVar(value="Tutte")
-        self.stato_var = tk.StringVar(value=ANOMALIA_STATO_CHOICES[0])
-        self.dal_var = tk.StringVar()
-        self.al_var = tk.StringVar()
-        self.anno_var = tk.StringVar(value=str(today.year))
+        self.stato_var = tk.StringVar(value=s.get("stato", ANOMALIA_STATO_CHOICES[0]))
+        self.dal_var = tk.StringVar(value=s.get("dal", ""))
+        self.al_var = tk.StringVar(value=s.get("al", ""))
+        self.anno_var = tk.StringVar(value=s.get("anno", str(today.year)))
         default_month_label = next(
             (label for label, value in MONTH_CHOICES if value == today.month),
             MONTH_CHOICES[0][0],
         )
-        self.mese_var = tk.StringVar(value=default_month_label)
-        self.use_date_range_var = tk.BooleanVar(value=False)
+        self.mese_var = tk.StringVar(value=s.get("mese", default_month_label))
+        self.use_date_range_var = tk.BooleanVar(value=s.get("use_range", False))
+        self._saved_tipo_indices: list = s.get("tipo_indices", [])
         self.report_var = tk.StringVar()
         self.report_options: Dict[str, Dict[str, Any]] = {}
         self._sort_reverse: Dict[str, bool] = {}
 
         self._setup_ui()
+        # Ripristina selezione listbox tipo dopo la creazione dell'UI
+        if self._saved_tipo_indices:
+            self.tipo_listbox.selection_clear(0, tk.END)
+            for idx in self._saved_tipo_indices:
+                try:
+                    self.tipo_listbox.selection_set(idx)
+                except Exception:
+                    pass
         self._load_report_templates()
         self._load_anomalie()
 
@@ -395,6 +417,13 @@ class AnomalieView:
             text="🗑️ Elimina",
             command=self._delete_anomalia,
             variant="danger",
+        ).pack(side="left", padx=4)
+
+        create_button(
+            actions_frame,
+            text="🔄 Aggiorna",
+            command=self._load_anomalie,
+            variant="secondary",
         ).pack(side="left", padx=4)
 
         self.stats_label = tk.Label(
@@ -1687,6 +1716,19 @@ class AnomalieView:
                 or search_lower in str(a.get("nome_preparatore", "")).lower()
             ]
 
+        # Salva stato filtri per la prossima apertura della schermata
+        AnomalieView._saved_state = {
+            "search": self.search_var.get(),
+            "codice": self.codice_var.get(),
+            "stato": self.stato_var.get(),
+            "dal": self.dal_var.get(),
+            "al": self.al_var.get(),
+            "anno": self.anno_var.get(),
+            "mese": self.mese_var.get(),
+            "use_range": self.use_date_range_var.get(),
+            "tipo_indices": list(self.tipo_listbox.curselection()),
+        }
+
         for item in self.tree.get_children():
             self.tree.delete(item)
 
@@ -1694,7 +1736,17 @@ class AnomalieView:
             ore_tim = anomalia.get("ore_tim")
             # Converti minuti → ore per la visualizzazione
             ore_str = f"{float(ore_tim)/60:.2f}" if ore_tim is not None else ""
-            
+
+            # Costruisce dettagli leggibili con numero colli
+            totale_colli = anomalia.get("totale_colli") or 0
+            dettagli_db = (anomalia.get("dettagli") or "").strip()
+            parti = []
+            if totale_colli:
+                parti.append(f"Colli: {int(totale_colli)}")
+            if dettagli_db:
+                parti.append(dettagli_db)
+            dettagli_display = " | ".join(parti) if parti else ""
+
             # Usa anno e mese dal database se disponibili, altrimenti dalla data_rilevamento
             anno = anomalia.get("anno")
             mese = anomalia.get("mese")
@@ -1723,7 +1775,7 @@ class AnomalieView:
                     anomalia.get("nome_preparatore", ""),
                     anomalia.get("tipo_attivita", ""),
                     ore_str,
-                    anomalia.get("dettagli", ""),
+                    dettagli_display,
                     anomalia.get("stato", ""),
                 ),
                 tags=(anomalia.get("stato", ""),),

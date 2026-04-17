@@ -865,95 +865,124 @@ class DataViewer:
         # Crea finestra popup
         popup = tk.Toplevel(root_window)
         popup.title("Gestione Nuove Aperture")
-        popup.geometry("700x600")
+        popup.geometry("780x640")
         popup.transient(root_window)
         popup.grab_set()
-        
+
         # Centra la finestra
         popup.update_idletasks()
-        x = root_window.winfo_x() + (root_window.winfo_width() // 2) - (700 // 2)
-        y = root_window.winfo_y() + (root_window.winfo_height() // 2) - (600 // 2)
-        popup.geometry(f"700x600+{x}+{y}")
-        
+        x = root_window.winfo_x() + (root_window.winfo_width() // 2) - (780 // 2)
+        y = root_window.winfo_y() + (root_window.winfo_height() // 2) - (640 // 2)
+        popup.geometry(f"780x640+{x}+{y}")
+
         # Frame principale
         main_frame = ttk.Frame(popup, padding=20)
         main_frame.pack(fill="both", expand=True)
-        
+
         # Titolo
         ttk.Label(
             main_frame,
             text="Seleziona le Nuove Aperture",
             font=FONTS["title"]
-        ).pack(pady=(0, 10))
-        
+        ).pack(pady=(0, 6))
+
         ttk.Label(
             main_frame,
-            text="Seleziona i negozi che sono nuove aperture per la Doppia Spunta:",
+            text=f"Periodo: {data_da} → {data_a}  |  {len(negozi)} negozi trovati",
             font=FONTS["subtitle"]
-        ).pack(pady=(0, 20))
-        
+        ).pack(pady=(0, 8))
+
+        # Barra ricerca
+        search_frame = ttk.Frame(main_frame)
+        search_frame.pack(fill="x", pady=(0, 10))
+        ttk.Label(search_frame, text="🔍 Ricerca:").pack(side="left", padx=(0, 6))
+        search_var = tk.StringVar()
+        search_entry = ttk.Entry(search_frame, textvariable=search_var, width=40, font=FONTS["input"])
+        search_entry.pack(side="left", fill="x", expand=True)
+
         # Frame con scrollbar per la lista di checkbox
         list_frame = ttk.Frame(main_frame)
         list_frame.pack(fill="both", expand=True)
-        
+
         canvas = tk.Canvas(list_frame, bg=COLORS["white"], highlightthickness=0)
         scrollbar = ttk.Scrollbar(list_frame, orient="vertical", command=canvas.yview)
         scrollable_frame = ttk.Frame(canvas)
-        
+
         scrollable_frame.bind(
             "<Configure>",
             lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
         )
-        
+
         canvas_frame = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
-        
-        # Funzione per lo scroll con la rotella del mouse
+
         def _on_mousewheel(event):
             canvas.yview_scroll(int(-1*(event.delta/120)), "units")
-        
-        # Bind della rotella del mouse
+
         canvas.bind_all("<MouseWheel>", _on_mousewheel)
-        
-        # Quando la finestra viene chiusa, rimuovi il binding e ripristina la finestra di importazione
+
         def on_close():
             canvas.unbind_all("<MouseWheel>")
             popup.destroy()
-            # Ripristina la finestra di importazione se era nascosta
             if self.parent_window:
                 self.parent_window.deiconify()
-        
+
         popup.protocol("WM_DELETE_WINDOW", on_close)
-        
-        # Posiziona canvas e scrollbar PRIMA di creare i checkbox
+
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
-        
-        # Aggiorna la larghezza del canvas quando viene ridimensionato
+
         def _on_canvas_configure(event):
             canvas.itemconfig(canvas_frame, width=event.width)
-        
+
         canvas.bind("<Configure>", _on_canvas_configure)
-        
-        # Dizionario per memorizzare i checkbox
+
+        # Dizionario checkbox e widget per il filtro
         checkbox_vars = {}
-        
-        # Crea checkbox per ogni negozio
-        for negozio in negozi:
-            var = tk.BooleanVar(value=negozio in nuove_aperture_salvate)
-            checkbox_vars[negozio] = var
-            
-            cb = ttk.Checkbutton(
-                scrollable_frame,
-                text=str(negozio),
-                variable=var
-            )
-            cb.pack(anchor="w", pady=2, padx=10)
-        
-        # Aggiorna il canvas per calcolare la regione scrollabile
-        scrollable_frame.update_idletasks()
-        canvas.update_idletasks()
-        canvas.configure(scrollregion=canvas.bbox("all"))
+        checkbox_widgets: list = []
+
+        def _build_rows(filter_text: str = "") -> None:
+            """Ricrea i checkbox applicando il filtro di ricerca."""
+            for w in scrollable_frame.winfo_children():
+                w.destroy()
+            checkbox_widgets.clear()
+
+            ft = filter_text.strip().lower()
+            for negozio in negozi:
+                if ft and ft not in str(negozio).lower():
+                    continue
+                if negozio not in checkbox_vars:
+                    checkbox_vars[negozio] = tk.BooleanVar(value=negozio in nuove_aperture_salvate)
+
+                row = ttk.Frame(scrollable_frame)
+                row.pack(fill="x", pady=1, padx=6)
+
+                cb = ttk.Checkbutton(row, variable=checkbox_vars[negozio])
+                cb.pack(side="left")
+
+                # Mostra codice cliente (campo tipo) e eventuale descrizione separata
+                parts = str(negozio).split(" - ", 1)
+                codice_lbl = parts[0].strip()
+                desc_lbl = parts[1].strip() if len(parts) > 1 else ""
+
+                ttk.Label(row, text=codice_lbl, font=("Segoe UI", 9, "bold"), width=18, anchor="w").pack(side="left", padx=(4, 8))
+                if desc_lbl:
+                    ttk.Label(row, text=desc_lbl, font=FONTS["input"], anchor="w").pack(side="left")
+
+                checkbox_widgets.append(cb)
+
+            scrollable_frame.update_idletasks()
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        # Prima popolazione
+        _build_rows()
+
+        # Filtro live
+        def _on_search(*_):
+            _build_rows(search_var.get())
+
+        search_var.trace_add("write", _on_search)
+        search_entry.focus_set()
         
         # Frame pulsanti
         button_frame = ttk.Frame(main_frame)

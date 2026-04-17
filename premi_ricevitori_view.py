@@ -47,14 +47,17 @@ DEBUG_PREPARATORI_ORE = {"NOTTE GIUSEPPE"}
 class PremiRicevitoriView(tk.Frame):
     """Modulo UI per generare e visualizzare i premi del reparto ricevimento."""
 
+    _saved_state: Dict[str, Any] = {}
+
     def __init__(self, parent: tk.Widget):
         super().__init__(parent, bg=COLORS["background"])
         self.pack(fill="both", expand=True)
 
         today = datetime.date.today()
-        self.anno_var = tk.StringVar(value=str(today.year))
-        self.mese_var = tk.StringVar(value=MONTH_CHOICES[today.month - 1][0])
-        self.codice_var = tk.StringVar()
+        s = PremiRicevitoriView._saved_state
+        self.anno_var = tk.StringVar(value=s.get("anno", str(today.year)))
+        self.mese_var = tk.StringVar(value=s.get("mese", MONTH_CHOICES[today.month - 1][0]))
+        self.codice_var = tk.StringVar(value=s.get("search", ""))
         self.ore_giorno_var = tk.StringVar(value="8")
         self.total_ore_mag_var = tk.StringVar(value="0.00")
         self.total_ore_uff_var = tk.StringVar(value="0.00")
@@ -495,6 +498,10 @@ class PremiRicevitoriView(tk.Frame):
             mese = next(m for label, m in MONTH_CHOICES if label == mese_label)
         except (ValueError, StopIteration):
             return
+
+        PremiRicevitoriView._saved_state = {
+            "anno": anno_str, "mese": mese_label, "search": self.codice_var.get().strip()
+        }
 
         try:
             premi = fetch_premi_ricevitori(anno, mese, search=search_text)

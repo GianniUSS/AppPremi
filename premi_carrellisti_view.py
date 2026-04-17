@@ -42,14 +42,17 @@ MONTH_CHOICES: List[Tuple[str, int]] = [
 class PremiCarrellistiView(tk.Frame):
     """Interfaccia per il calcolo premi carrellisti."""
 
+    _saved_state: Dict[str, Any] = {}
+
     def __init__(self, parent: tk.Widget):
         super().__init__(parent, bg=COLORS["background"])
         self.pack(fill="both", expand=True)
 
         today = datetime.date.today()
-        self.anno_var = tk.StringVar(value=str(today.year))
-        self.mese_var = tk.StringVar(value=MONTH_CHOICES[today.month - 1][0])
-        self.codice_var = tk.StringVar()
+        s = PremiCarrellistiView._saved_state
+        self.anno_var = tk.StringVar(value=s.get("anno", str(today.year)))
+        self.mese_var = tk.StringVar(value=s.get("mese", MONTH_CHOICES[today.month - 1][0]))
+        self.codice_var = tk.StringVar(value=s.get("search", ""))
         self._current_premi: List[Dict[str, Any]] = []
         self._sort_reverse: Dict[str, bool] = {}
 
@@ -416,6 +419,10 @@ class PremiCarrellistiView(tk.Frame):
             mese = next(m for label, m in MONTH_CHOICES if label == mese_label)
         except (ValueError, StopIteration):
             return
+
+        PremiCarrellistiView._saved_state = {
+            "anno": anno_str, "mese": mese_label, "search": self.codice_var.get().strip()
+        }
 
         try:
             # Recupera premi dal database
