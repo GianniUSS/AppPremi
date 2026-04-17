@@ -1,13 +1,14 @@
 {
-    "latest_version":  "1.2.28",
+    "latest_version":  "1.2.29",
     "release_date":  "2026-04-17",
     "release_notes":  [
-                          "Periodo globale: selezionando Anno e Mese nella barra laterale, tutte le schermate (Premi, Anomalie, Gestione Dati, Dati TIM) si aggiornano automaticamente con il periodo impostato",
-                          "Gestione Dati e Dati TIM: il mese e l\u0027anno di default ora rispettano il periodo globale della sidebar",
-                          "Impostazione periodo persistente: il periodo scelto viene salvato e ripristinato alla riapertura dell\u0027app"
+                          "Anomalie: nuova colonna Data (dd/mm/yyyy) e colonna Colli dedicata, dettaglio riformattato in modo compatto e leggibile",
+                          "Anomalie: tutti i valori temporali nel dettaglio ora sono espressi in ore (TIM, Gestionale, differenza Δ) per tutti i tipi (DIFFERENZA, ORE_SENZA_PRODUZIONE, PRODUZIONE_SENZA_ORE)",
+                          "Anomalie: correzione unità in PRODUZIONE_SENZA_ORE (prima erano minuti etichettati come ore)",
+                          "Periodo globale: filtri Anno/Mese della sidebar ora ereditati correttamente da Anomalie, Gestione Dati, Dati TIM, Premi ed Export HR"
                       ],
-    "download_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.28/GestionePremi.exe",
-    "sha256":  "174debfa2c2defaaf88ab33d2b1bff87753b62202b2f5ec0b481012d8efea663",
+    "download_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.29/GestionePremi.exe",
+    "sha256":  "f048a9756df5b9a70c0848b663b409279f2488e8f09c7939eeb0d18026cc18fd",
     "file_name":  "GestionePremi.exe",
     "icons_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.7/icons-v1.2.7.zip"
 }
