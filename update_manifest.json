@@ -1,13 +1,14 @@
 {
-    "latest_version": "1.2.25",
-    "release_date": "2026-04-09",
-    "release_notes": [
-        "Ricerca libera nei premi: il campo filtro nelle viste Preparatori, Carrellisti, Doppia Spunta e Ricevimento ora cerca per codice o nome del preparatore",
-        "Barra totali più visibile nelle viste premi (sfondo blu, testo bianco grassetto)",
-        "Nuova sezione Dati TIM nel menu con griglia, filtri data e ricerca per codice/nome"
-    ],
-    "download_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.25/GestionePremi.zip",
-    "sha256": "1355f78e4a3e27d34b0b3e503c178a1a0e8db7df14eeccdd31e966396c8251f2",
-    "file_name": "GestionePremi.zip",
-    "icons_url": "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.7/icons-v1.2.7.zip"
+    "latest_version":  "1.2.26",
+    "release_date":  "2026-04-17",
+    "release_notes":  [
+                          "Miglioramento performance: connection pool MySQL, eliminato overhead di connessione su ogni query (attesa ridotta del 60-80%)",
+                          "Ricerca libera nei premi: il campo filtro nelle viste Preparatori, Carrellisti, Doppia Spunta e Ricevimento ora cerca per codice o nome del preparatore",
+                          "Barra totali più visibile nelle viste premi (sfondo blu, testo bianco grassetto)",
+                          "Nuova sezione Dati TIM nel menu con griglia, filtri data e ricerca per codice/nome"
+                      ],
+    "download_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.26/GestionePremi.zip",
+    "sha256":  "9e4ce50bb12f6959330e292a0201ab35dac9ea867b314326b6367240839f3e1b",
+    "file_name":  "GestionePremi.zip",
+    "icons_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.7/icons-v1.2.7.zip"
 }
