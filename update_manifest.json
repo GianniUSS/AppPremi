@@ -1,14 +1,13 @@
 {
-    "latest_version":  "1.2.29",
-    "release_date":  "2026-04-17",
+    "latest_version":  "1.2.30",
+    "release_date":  "2026-04-20",
     "release_notes":  [
-                          "Anomalie: nuova colonna Data (dd/mm/yyyy) e colonna Colli dedicata, dettaglio riformattato in modo compatto e leggibile",
-                          "Anomalie: tutti i valori temporali nel dettaglio ora sono espressi in ore (TIM, Gestionale, differenza Δ) per tutti i tipi (DIFFERENZA, ORE_SENZA_PRODUZIONE, PRODUZIONE_SENZA_ORE)",
-                          "Anomalie: correzione unità in PRODUZIONE_SENZA_ORE (prima erano minuti etichettati come ore)",
-                          "Periodo globale: filtri Anno/Mese della sidebar ora ereditati correttamente da Anomalie, Gestione Dati, Dati TIM, Premi ed Export HR"
+                          "Aggiornamento automatico: risolto errore SSL CERTIFICATE_VERIFY_FAILED su macchine con store certificati Windows incompleto (bundle CA certifi integrato nell\u0027eseguibile)",
+                          "Nuove Aperture Doppia Spunta: i nomi lunghi dei negozi ora sono visualizzati per intero (rimossa troncatura a 18 caratteri)",
+                          "Nuove Aperture Doppia Spunta: finestra più larga (920x680) e ridimensionabile per una lettura più comoda"
                       ],
-    "download_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.29/GestionePremi.exe",
-    "sha256":  "f048a9756df5b9a70c0848b663b409279f2488e8f09c7939eeb0d18026cc18fd",
+    "download_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.30/GestionePremi.exe",
+    "sha256":  "d6516cf5bd22dda80989eba79da23b89bc4dcd60690896aa2a13fa57e69e234d",
     "file_name":  "GestionePremi.exe",
     "icons_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.7/icons-v1.2.7.zip"
 }
