@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import shutil
+import ssl
 import subprocess
 import sys
 import threading
@@ -19,6 +20,23 @@ from urllib.error import URLError
 from urllib.request import urlopen
 
 from version import APP_VERSION, UPDATE_MANIFEST_URL
+
+
+def _build_ssl_context() -> ssl.SSLContext:
+    """Costruisce un SSLContext con un CA bundle affidabile.
+
+    In ambienti PyInstaller (frozen) Python non accede allo store certificati
+    di Windows, quindi serve fornire esplicitamente il bundle CA di certifi.
+    Fallback allo store di default per avvio da sorgente.
+    """
+    try:
+        import certifi  # type: ignore
+        return ssl.create_default_context(cafile=certifi.where())
+    except Exception:
+        return ssl.create_default_context()
+
+
+_SSL_CONTEXT = _build_ssl_context()
 
 # Dimensione blocco download (64 KiB)
 _CHUNK_SIZE = 64 * 1024
@@ -62,7 +80,7 @@ def fetch_manifest(url: str = UPDATE_MANIFEST_URL) -> Tuple[Optional[UpdateInfo]
     """
 
     try:
-        with urlopen(url, timeout=10) as response:
+        with urlopen(url, timeout=10, context=_SSL_CONTEXT) as response:
             content = response.read().decode('utf-8')
     except URLError as exc:
         return None, f"Impossibile recuperare il manifesto: {exc.reason}"
@@ -102,7 +120,7 @@ def fetch_manifest(url: str = UPDATE_MANIFEST_URL) -> Tuple[Optional[UpdateInfo]
 
 def _download_file(url: str, destination: Path, progress_cb: Callable[[int, Optional[int]], None]) -> None:
     """Scarica un file aggiornando la progress bar tramite callback."""
-    with urlopen(url) as response:
+    with urlopen(url, context=_SSL_CONTEXT) as response:
         total = response.headers.get('Content-Length')
         total_bytes = int(total) if total is not None else None
 

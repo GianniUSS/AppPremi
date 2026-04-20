@@ -866,15 +866,16 @@ class DataViewer:
         # Crea finestra popup
         popup = tk.Toplevel(root_window)
         popup.title("Gestione Nuove Aperture")
-        popup.geometry("780x640")
+        popup.geometry("920x680")
+        popup.minsize(720, 480)
         popup.transient(root_window)
         popup.grab_set()
 
         # Centra la finestra
         popup.update_idletasks()
-        x = root_window.winfo_x() + (root_window.winfo_width() // 2) - (780 // 2)
-        y = root_window.winfo_y() + (root_window.winfo_height() // 2) - (640 // 2)
-        popup.geometry(f"780x640+{x}+{y}")
+        x = root_window.winfo_x() + (root_window.winfo_width() // 2) - (920 // 2)
+        y = root_window.winfo_y() + (root_window.winfo_height() // 2) - (680 // 2)
+        popup.geometry(f"920x680+{x}+{y}")
 
         # Frame principale
         main_frame = ttk.Frame(popup, padding=20)
@@ -966,9 +967,13 @@ class DataViewer:
                 codice_lbl = parts[0].strip()
                 desc_lbl = parts[1].strip() if len(parts) > 1 else ""
 
-                ttk.Label(row, text=codice_lbl, font=("Segoe UI", 9, "bold"), width=18, anchor="w").pack(side="left", padx=(4, 8))
                 if desc_lbl:
-                    ttk.Label(row, text=desc_lbl, font=FONTS["input"], anchor="w").pack(side="left")
+                    # Formato "CODICE - Descrizione": codice in bold a larghezza fissa, descrizione che si espande
+                    ttk.Label(row, text=codice_lbl, font=("Segoe UI", 9, "bold"), width=18, anchor="w").pack(side="left", padx=(4, 8))
+                    ttk.Label(row, text=desc_lbl, font=FONTS["input"], anchor="w").pack(side="left", fill="x", expand=True)
+                else:
+                    # Solo descrizione/ragione sociale: nessuna larghezza fissa per evitare troncature
+                    ttk.Label(row, text=codice_lbl, font=("Segoe UI", 9, "bold"), anchor="w").pack(side="left", fill="x", expand=True, padx=(4, 0))
 
                 checkbox_widgets.append(cb)
 
