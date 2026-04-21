@@ -1,13 +1,11 @@
 {
-    "latest_version":  "1.2.30",
-    "release_date":  "2026-04-20",
+    "latest_version":  "1.2.31",
+    "release_date":  "2026-04-21",
     "release_notes":  [
-                          "Aggiornamento automatico: risolto errore SSL CERTIFICATE_VERIFY_FAILED su macchine con store certificati Windows incompleto (bundle CA certifi integrato nell\u0027eseguibile)",
-                          "Nuove Aperture Doppia Spunta: i nomi lunghi dei negozi ora sono visualizzati per intero (rimossa troncatura a 18 caratteri)",
-                          "Nuove Aperture Doppia Spunta: finestra più larga (920x680) e ridimensionabile per una lettura più comoda"
+                          "Ore TIM: le ore lavorate ora sono calcolate al netto di tutte le pause (sia pagate che non pagate). Per aggiornare i valori già presenti lanciare \"Sincronizza con TIM\" dalla vista Produzione"
                       ],
-    "download_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.30/GestionePremi.exe",
-    "sha256":  "d6516cf5bd22dda80989eba79da23b89bc4dcd60690896aa2a13fa57e69e234d",
+    "download_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.31/GestionePremi.exe",
+    "sha256":  "510213b3162a826197fa6e0d269af02a2ab2f72f63ffc94da38de055537e8c0d",
     "file_name":  "GestionePremi.exe",
     "icons_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.7/icons-v1.2.7.zip"
 }
