@@ -1656,9 +1656,10 @@ def fetch_attivita_tim_range(
                     ta.descrizione AS attivita,
                     a.data_inizio,
                     a.data_fine,
-                    COALESCE(a.pausa, 0) AS pausa,
+                    COALESCE((SELECT SUM(p.durata) FROM pausa p WHERE p.attivita_id = a.id), 0) AS pausa,
                     GREATEST(
-                        TIMESTAMPDIFF(MINUTE, a.data_inizio, a.data_fine) - COALESCE(a.pausa, 0),
+                        TIMESTAMPDIFF(MINUTE, a.data_inizio, a.data_fine)
+                          - COALESCE((SELECT SUM(p.durata) FROM pausa p WHERE p.attivita_id = a.id), 0),
                         0
                     ) AS durata_minuti
                 FROM attivita a
@@ -1697,9 +1698,10 @@ def fetch_attivita_tim(
                     a.data_inizio,
                     a.data_fine,
                     a.data_riferimento,
-                    a.pausa,
+                    COALESCE((SELECT SUM(p.durata) FROM pausa p WHERE p.attivita_id = a.id), 0) AS pausa,
                     GREATEST(
-                        TIMESTAMPDIFF(MINUTE, a.data_inizio, a.data_fine) - COALESCE(a.pausa, 0),
+                        TIMESTAMPDIFF(MINUTE, a.data_inizio, a.data_fine)
+                          - COALESCE((SELECT SUM(p.durata) FROM pausa p WHERE p.attivita_id = a.id), 0),
                         0
                     ) AS durata_minuti
                 FROM attivita a

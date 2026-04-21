@@ -683,7 +683,8 @@ class PremiRicevitoriView(tk.Frame):
                        SUM(
                            CASE
                                WHEN a.data_inizio IS NOT NULL AND a.data_fine IS NOT NULL THEN GREATEST(
-                                   TIMESTAMPDIFF(MINUTE, a.data_inizio, a.data_fine) - COALESCE(a.pausa, 0),
+                                   TIMESTAMPDIFF(MINUTE, a.data_inizio, a.data_fine)
+                                     - COALESCE((SELECT SUM(p.durata) FROM pausa p WHERE p.attivita_id = a.id), 0),
                                    0
                                )
                                ELSE 0
@@ -1174,7 +1175,8 @@ class PremiRicevitoriView(tk.Frame):
                        SUM(
                            CASE
                                WHEN a.data_inizio IS NOT NULL AND a.data_fine IS NOT NULL THEN GREATEST(
-                                   TIMESTAMPDIFF(MINUTE, a.data_inizio, a.data_fine) - COALESCE(a.pausa, 0),
+                                   TIMESTAMPDIFF(MINUTE, a.data_inizio, a.data_fine)
+                                     - COALESCE((SELECT SUM(p.durata) FROM pausa p WHERE p.attivita_id = a.id), 0),
                                    0
                                )
                                ELSE 0
