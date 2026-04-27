@@ -1000,8 +1000,8 @@ class AnomalieView:
         header = tk.Frame(dialog, bg=COLORS["background"])
         header.pack(fill="x", padx=16, pady=(12, 6))
 
-        codice = row_values[4] if len(row_values) > 4 else ""
-        nome = row_values[5] if len(row_values) > 5 else ""
+        codice = row_values[3] if len(row_values) > 3 else ""
+        nome = row_values[4] if len(row_values) > 4 else ""
 
         titolo = "Elenco Codici Gestionale"
         if codice or nome:
