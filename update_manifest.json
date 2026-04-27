@@ -1,11 +1,11 @@
 {
-    "latest_version":  "1.2.31",
-    "release_date":  "2026-04-21",
+    "latest_version":  "1.2.32",
+    "release_date":  "2026-04-27",
     "release_notes":  [
-                          "Ore TIM: le ore lavorate ora sono calcolate al netto di tutte le pause (sia pagate che non pagate). Per aggiornare i valori già presenti lanciare \"Sincronizza con TIM\" dalla vista Produzione"
+                          "Anomalie - Codici Gestionali: corretto il pre-riempimento del campo Nominativo (mostrava il tipo attivita invece del nome del preparatore), ora la ricerca utenti su TIM funziona correttamente"
                       ],
-    "download_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.31/GestionePremi.exe",
-    "sha256":  "510213b3162a826197fa6e0d269af02a2ab2f72f63ffc94da38de055537e8c0d",
+    "download_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.32/GestionePremi.exe",
+    "sha256":  "90292508cc6e54f92032410a8c9c9bbdc9789547788d98ea64a7c3d0430a817a",
     "file_name":  "GestionePremi.exe",
     "icons_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.7/icons-v1.2.7.zip"
 }
