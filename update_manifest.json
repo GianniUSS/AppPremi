@@ -1,11 +1,13 @@
 {
-    "latest_version":  "1.2.32",
-    "release_date":  "2026-04-27",
+    "latest_version":  "1.2.33",
+    "release_date":  "2026-04-30",
     "release_notes":  [
-                          "Anomalie - Codici Gestionali: corretto il pre-riempimento del campo Nominativo (mostrava il tipo attivita invece del nome del preparatore), ora la ricerca utenti su TIM funziona correttamente"
+                          "Dati TIM: corretta duplicazione delle righe quando un utente ha piu codici gestionali attivi (la JOIN ora abbina il codice corretto in base al tipo di attivita)",
+                          "Codici Gestionali: il bottone \"Elimina\" e stato sostituito con \"Disattiva\" - imposta valido_al = oggi invece di cancellare il record. Per riattivarlo basta modificare la data Al",
+                          "Premi Ricevitori: la colonna \"Giorni Lavorati\" ora si ricalcola in base alle Ore Giorno (round delle ore totali / ore giorno) invece del conteggio dei giorni di calendario. Il ricalcolo avviene cliccando \"Calcola Premi\""
                       ],
-    "download_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.32/GestionePremi.exe",
-    "sha256":  "90292508cc6e54f92032410a8c9c9bbdc9789547788d98ea64a7c3d0430a817a",
+    "download_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.33/GestionePremi.exe",
+    "sha256":  "2d91dbfd71d8d31d30e97d3162663a620a21d2e2c42a39f009818aa3e9fc8bd2",
     "file_name":  "GestionePremi.exe",
     "icons_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.7/icons-v1.2.7.zip"
 }
