@@ -1,1 +1,3 @@
-Anomalie - Codici Gestionali: corretto il pre-riempimento del campo Nominativo (mostrava il tipo attivita invece del nome del preparatore), ora la ricerca utenti su TIM funziona correttamente
+Dati TIM: corretta duplicazione delle righe quando un utente ha piu codici gestionali attivi (la JOIN ora abbina il codice corretto in base al tipo di attivita)
+Codici Gestionali: il bottone "Elimina" e stato sostituito con "Disattiva" - imposta valido_al = oggi invece di cancellare il record. Per riattivarlo basta modificare la data Al
+Premi Ricevitori: la colonna "Giorni Lavorati" ora si ricalcola in base alle Ore Giorno (round delle ore totali / ore giorno) invece del conteggio dei giorni di calendario. Il ricalcolo avviene cliccando "Calcola Premi"

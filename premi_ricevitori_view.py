@@ -1105,6 +1105,15 @@ class PremiRicevitoriView(tk.Frame):
             if giorni_in_premio < 0:
                 giorni_in_premio = Decimal("0")
 
+            # Giorni Lavorati: arrotondamento standard (HALF_UP) di ore/ore_giorno a intero.
+            # Sostituisce il vecchio conteggio dei giorni di calendario distinti, così che
+            # cambiando "Ore Giorno" anche questa colonna si aggiorni di conseguenza.
+            stats["giorni_lavorati"] = int(
+                (ore / ore_giorno).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+            )
+            if stats["giorni_lavorati"] < 0:
+                stats["giorni_lavorati"] = 0
+
             plt_medio = (stats["tot_pallet"] / ore).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
             premio_base = (premio_giorno_squadra * giorni_in_premio).quantize(cent)
 

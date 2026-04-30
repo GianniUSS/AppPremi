@@ -1666,6 +1666,7 @@ def fetch_attivita_tim_range(
                 JOIN tipoattivita ta ON a.tipo_attivita_id = ta.id
                 JOIN utente u ON a.utente_id = u.id
                 JOIN codicegestionale cg ON cg.utente_id = u.id
+                    AND cg.tipo_attivita_id = a.tipo_attivita_id
                     AND a.data_riferimento BETWEEN cg.valido_dal AND COALESCE(cg.valido_al, '9999-12-31')
                 WHERE {where_clause}
                 ORDER BY a.data_riferimento, cg.codice, a.data_inizio
@@ -1708,6 +1709,7 @@ def fetch_attivita_tim(
                 JOIN tipoattivita ta ON a.tipo_attivita_id = ta.id
                 JOIN utente u ON a.utente_id = u.id
                 JOIN codicegestionale cg ON cg.utente_id = u.id
+                    AND cg.tipo_attivita_id = a.tipo_attivita_id
                 WHERE LOWER(cg.codice) = %s
                   AND a.data_riferimento = %s
                   AND %s BETWEEN cg.valido_dal AND COALESCE(cg.valido_al, '9999-12-31')
@@ -3102,6 +3104,37 @@ def update_codice_gestionale_tim(
                 WHERE id = %s
             """
             cur.execute(query, params)
+            conn.commit()
+
+
+def delete_codice_gestionale_tim(record_id: int) -> None:
+    """Elimina definitivamente un record da codicegestionale su TIM.
+
+    NB: operazione non recuperabile. Per disattivare in modo reversibile
+    usare chiudi_codice_gestionale_tim().
+    """
+    with closing(_get_conn_main()) as conn:
+        with closing(conn.cursor()) as cur:
+            cur.execute(
+                "DELETE FROM codicegestionale WHERE id = %s",
+                (int(record_id),),
+            )
+            conn.commit()
+
+
+def chiudi_codice_gestionale_tim(record_id: int) -> None:
+    """Disattiva un codice gestionale impostando valido_al = oggi.
+
+    Soft-delete reversibile: il record resta nell'elenco, ma le query
+    (`BETWEEN valido_dal AND valido_al`) non lo considerano più dal
+    giorno successivo. Per riattivarlo basta modificare la data Al.
+    """
+    with closing(_get_conn_main()) as conn:
+        with closing(conn.cursor()) as cur:
+            cur.execute(
+                "UPDATE codicegestionale SET valido_al = CURDATE() WHERE id = %s",
+                (int(record_id),),
+            )
             conn.commit()
 
 

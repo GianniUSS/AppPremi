@@ -21,6 +21,7 @@ from database import (
     fetch_report_templates,
     execute_custom_query,
     insert_codice_gestionale_tim,
+    chiudi_codice_gestionale_tim,
     resolve_anomalie_codice_non_abbinato,
     search_utenti_tim,
     split_attivita_tim,
@@ -1249,6 +1250,43 @@ class AnomalieView:
             except Exception:
                 pass
 
+        def on_delete() -> None:
+            if not selected_record_id[0]:
+                messagebox.showwarning(
+                    "Selezione mancante",
+                    "Seleziona un record da disattivare.",
+                    parent=dialog,
+                )
+                return
+            codice_corrente = codice_var.get().strip()
+            descr_corrente = descr_var.get().strip()
+            attivita_corrente = attivita_var.get().strip()
+            confirm = messagebox.askyesno(
+                "Conferma disattivazione",
+                "Disattivare l'associazione "
+                f"codice '{codice_corrente}' "
+                f"(attività: {attivita_corrente or '-'}, "
+                f"descrizione: {descr_corrente or '-'})?\n\n"
+                "Verrà impostata la data Al a oggi: dal giorno successivo "
+                "il codice non sarà più usato.\n"
+                "Per riattivarlo, modifica la data Al e premi Modifica.",
+                parent=dialog,
+            )
+            if not confirm:
+                return
+            try:
+                chiudi_codice_gestionale_tim(int(selected_record_id[0]))
+            except Exception as exc:
+                messagebox.showerror(
+                    "Errore",
+                    f"Impossibile disattivare il codice gestionale:\n{exc}",
+                    parent=dialog,
+                )
+                return
+            if current_user_id[0]:
+                load_codici_for_user(current_user_id[0])
+            clear_form()
+
         user_frame = tk.Frame(dialog, bg=COLORS["background"])
         user_frame.pack(fill="x", padx=16, pady=(0, 8))
 
@@ -1495,6 +1533,14 @@ class AnomalieView:
             text="Nuovo",
             command=on_insert,
             variant="secondary",
+            width=12,
+        ).pack(side="left", padx=6)
+
+        create_button(
+            actions_frame,
+            text="Disattiva",
+            command=on_delete,
+            variant="danger",
             width=12,
         ).pack(side="left", padx=6)
 
