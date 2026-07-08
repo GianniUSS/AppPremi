@@ -14,6 +14,13 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# [System.IO.File]::WriteAllText usa [Environment]::CurrentDirectory, che NON segue
+# Set-Location/cd di PowerShell. Senza questo allineamento version.py e il manifest
+# venivano scritti nella working directory .NET del processo (spesso diversa dalla
+# root del repo), quindi git non vedeva alcuna modifica e la release veniva pubblicata
+# con manifest/versione non aggiornati. Allinea le due working directory.
+[Environment]::CurrentDirectory = (Get-Location).ProviderPath
+
 function Set-FileUtf8NoBom {
     param(
         [Parameter(Mandatory = $true)]
@@ -91,6 +98,9 @@ Set-FileUtf8NoBom -Path $ManifestPath -Content ($manifestJson + "`n")
 Write-Host "Eseguo commit e push..." -ForegroundColor Cyan
 git add $versionFile $ManifestPath
 git commit -m "chore: release $Version"
+if ($LASTEXITCODE -ne 0) {
+    throw "git commit non ha prodotto un commit di release (version.py/manifest non modificati?). Release interrotta."
+}
 
 git tag "v$Version" -f
 
