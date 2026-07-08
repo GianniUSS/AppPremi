@@ -1,13 +1,11 @@
 {
-    "latest_version":  "1.2.33",
-    "release_date":  "2026-04-30",
+    "latest_version":  "1.2.34",
+    "release_date":  "2026-07-08",
     "release_notes":  [
-                          "Dati TIM: corretta duplicazione delle righe quando un utente ha piu codici gestionali attivi (la JOIN ora abbina il codice corretto in base al tipo di attivita)",
-                          "Codici Gestionali: il bottone \"Elimina\" e stato sostituito con \"Disattiva\" - imposta valido_al = oggi invece di cancellare il record. Per riattivarlo basta modificare la data Al",
-                          "Premi Ricevitori: la colonna \"Giorni Lavorati\" ora si ricalcola in base alle Ore Giorno (round delle ore totali / ore giorno) invece del conteggio dei giorni di calendario. Il ricalcolo avviene cliccando \"Calcola Premi\""
+                          "Import Carrellisti: aggiunto il supporto al nuovo formato del file Excel (layout tabellare, con Data e Preparatore ripetuti su ogni riga anziche in intestazioni separate). L'app riconosce ora automaticamente sia il nuovo formato sia quello vecchio a blocchi, senza dover indicare quale si sta importando."
                       ],
-    "download_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.33/GestionePremi.exe",
-    "sha256":  "2d91dbfd71d8d31d30e97d3162663a620a21d2e2c42a39f009818aa3e9fc8bd2",
+    "download_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.34/GestionePremi.exe",
+    "sha256":  "4d26e569187991e0fbb44fbc1f3de80998862d988800b57d31bb11d508484b67",
     "file_name":  "GestionePremi.exe",
     "icons_url":  "https://github.com/GianniUSS/AppPremi/releases/download/v1.2.7/icons-v1.2.7.zip"
 }
