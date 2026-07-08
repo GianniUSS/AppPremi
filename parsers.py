@@ -550,20 +550,28 @@ def parse_carrelisti(file_path: str, data_rif: datetime.date) -> pd.DataFrame:
         if data_col and bool(row.get("_is_new_date_section", False)):
             current_code = None
 
-        # Riga intestazione preparatore
-        if prep and (not tipo or tipo.upper() in ["", "NAN", "ST", "AP", "CM"]):
+        # Orari della riga: la loro presenza distingue una riga dati da un'intestazione
+        ora_inizio = row[ora_inizio_col] if pd.notna(row[ora_inizio_col]) else None
+        ora_fine = row[ora_fine_col] if pd.notna(row[ora_fine_col]) else None
+        has_orario = ora_inizio is not None and ora_fine is not None
+
+        # Riga intestazione preparatore (formato a blocchi legacy):
+        # preparatore presente, senza orari e senza tipo → definisce solo il codice corrente.
+        if prep and not has_orario and (not tipo or tipo.upper() in ["", "NAN"]):
             current_code = prep
             continue
-        
+
+        # Formato tabellare inline (nuovo): preparatore, tipo e orari sulla stessa riga.
+        # Il preparatore è ripetuto su ogni riga dati anziché in un'intestazione separata.
+        if prep and has_orario:
+            current_code = prep
+
         if not current_code:
             continue
-        
+
         # Riga dati
         if tipo and tipo.upper() != "NAN":
-            ora_inizio = row[ora_inizio_col] if pd.notna(row[ora_inizio_col]) else None
-            ora_fine = row[ora_fine_col] if pd.notna(row[ora_fine_col]) else None
-            
-            if not ora_inizio or not ora_fine:
+            if not has_orario:
                 continue
 
             if ora_inizio == ora_fine:
